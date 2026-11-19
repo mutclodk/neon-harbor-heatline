@@ -51,35 +51,46 @@ function createSkyTexture() {
   c.width = 512;
   c.height = 512;
   const ctx = c.getContext('2d');
-  const g = ctx.createLinearGradient(0, 0, 0, 512);
-  g.addColorStop(0.0, '#2e1065'); // deep twilight violet
-  g.addColorStop(0.22, '#581c87'); // royal purple
-  g.addColorStop(0.42, '#9d174d'); // vibrant magenta dusk
-  g.addColorStop(0.62, '#e11d48'); // bright neon rose
-  g.addColorStop(0.78, '#ea580c'); // fiery orange sunset
-  g.addColorStop(0.90, '#f97316'); // glowing sunset orange
-  g.addColorStop(1.0, '#fde047'); // golden yellow sun horizon
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 512, 512);
 
-  // Soft glowing sun disc near the horizon
-  const sunGrad = ctx.createRadialGradient(256, 430, 8, 256, 430, 140);
-  sunGrad.addColorStop(0, 'rgba(255, 255, 240, 0.95)');
-  sunGrad.addColorStop(0.25, 'rgba(254, 240, 138, 0.7)');
-  sunGrad.addColorStop(0.65, 'rgba(249, 115, 22, 0.35)');
+  // Upper hemisphere (0.0 to 0.5 = zenith down to horizon)
+  const gTop = ctx.createLinearGradient(0, 0, 0, 256);
+  gTop.addColorStop(0.0, '#1e1b4b'); // deep twilight indigo
+  gTop.addColorStop(0.32, '#581c87'); // royal purple
+  gTop.addColorStop(0.55, '#c026d3'); // vibrant magenta
+  gTop.addColorStop(0.72, '#e11d48'); // bright neon rose
+  gTop.addColorStop(0.85, '#ea580c'); // fiery sunset orange
+  gTop.addColorStop(0.95, '#f97316'); // glowing sunset orange
+  gTop.addColorStop(1.0, '#fde047'); // golden yellow horizon
+  ctx.fillStyle = gTop;
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Lower hemisphere (horizon down to nadir / water reflection)
+  const gBottom = ctx.createLinearGradient(0, 256, 0, 512);
+  gBottom.addColorStop(0.0, '#fde047');
+  gBottom.addColorStop(0.12, '#ea580c');
+  gBottom.addColorStop(0.4, '#0e7490');
+  gBottom.addColorStop(1.0, '#083344');
+  ctx.fillStyle = gBottom;
+  ctx.fillRect(0, 256, 512, 256);
+
+  // Glowing sun disc right at the horizon (y = 230)
+  const sunGrad = ctx.createRadialGradient(256, 230, 8, 256, 230, 110);
+  sunGrad.addColorStop(0, 'rgba(255, 255, 245, 1)');
+  sunGrad.addColorStop(0.25, 'rgba(254, 240, 138, 0.85)');
+  sunGrad.addColorStop(0.65, 'rgba(249, 115, 22, 0.4)');
   sunGrad.addColorStop(1.0, 'rgba(249, 115, 22, 0)');
   ctx.fillStyle = sunGrad;
   ctx.beginPath();
-  ctx.arc(256, 430, 140, 0, Math.PI * 2);
+  ctx.arc(256, 230, 110, 0, Math.PI * 2);
   ctx.fill();
 
   // Subtle clouds along the horizon
-  ctx.fillStyle = 'rgba(253, 186, 116, 0.38)';
+  ctx.fillStyle = 'rgba(253, 186, 116, 0.42)';
   for (let i = 0; i < 9; i++) {
     const cx = (i * 65 + 20) % 512;
-    const cy = 370 + (i % 3) * 22;
+    const cy = 205 + (i % 3) * 14;
     ctx.beginPath();
-    ctx.ellipse(cx, cy, 70, 16, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, 65, 12, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -150,7 +161,7 @@ export function createRenderer(canvas) {
   const scene = new THREE.Scene();
   const skyTex = createSkyTexture();
   scene.background = skyTex;
-  scene.fog = new THREE.FogExp2(0xf97316, 0.0012);
+  scene.fog = new THREE.FogExp2(0xf97316, 0.001);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -178,18 +189,21 @@ export function createRenderer(canvas) {
   const ambientLight = new THREE.AmbientLight(0xfdba74, 1.1);
   scene.add(ambientLight);
 
-  const sunLight = new THREE.DirectionalLight(0xffedd5, 3.2);
-  sunLight.position.set(220, 110, 260); // low angle for long dramatic sun shadows
+  // Directional Sun casting long golden shadows across roads
+  const sunLight = new THREE.DirectionalLight(0xffedd5, 3.4);
+  sunLight.position.set(220, 95, 240); // low angle for long dramatic sun shadows
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.width = 2048;
   sunLight.shadow.mapSize.height = 2048;
   sunLight.shadow.camera.near = 10;
-  sunLight.shadow.camera.far = 900;
-  sunLight.shadow.camera.left = -320;
-  sunLight.shadow.camera.right = 320;
-  sunLight.shadow.camera.top = 320;
-  sunLight.shadow.camera.bottom = -320;
+  sunLight.shadow.camera.far = 500;
+  sunLight.shadow.camera.left = -95;
+  sunLight.shadow.camera.right = 95;
+  sunLight.shadow.camera.top = 95;
+  sunLight.shadow.camera.bottom = -95;
+  sunLight.shadow.bias = -0.0005;
   scene.add(sunLight);
+  scene.add(sunLight.target); // Essential in Three.js for target tracking!
 
   // Ocean Plane surrounding Port Solano with vibrant specular feel
   const oceanGeom = new THREE.PlaneGeometry(3600, 3600);
@@ -427,11 +441,13 @@ export function createRenderer(canvas) {
         for (let dz of [-7, 7]) {
           const leg = new THREE.Mesh(new THREE.BoxGeometry(1.4, 42, 1.4), steelMat);
           leg.position.set(dx, 21, dz);
+          leg.castShadow = true;
           craneGroup.add(leg);
         }
       }
       const boom = new THREE.Mesh(new THREE.BoxGeometry(55, 3.8, 5.5), steelMat);
       boom.position.set(0, 42, 0);
+      boom.castShadow = true;
       craneGroup.add(boom);
 
       // Warning beacon light on top
@@ -457,6 +473,7 @@ export function createRenderer(canvas) {
     const hullGeom = new THREE.BoxGeometry(32, 14, 180);
     const hull = new THREE.Mesh(hullGeom, hullMat);
     hull.position.set(0, 3, 0);
+    hull.castShadow = true;
     shipGroup.add(hull);
 
     // Ship bridge
@@ -464,6 +481,7 @@ export function createRenderer(canvas) {
     const bridgeMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
     const bridge = new THREE.Mesh(bridgeGeom, bridgeMat);
     bridge.position.set(0, 15, -60);
+    bridge.castShadow = true;
     shipGroup.add(bridge);
 
     // Ship container cargo stacks
@@ -475,6 +493,7 @@ export function createRenderer(canvas) {
           new THREE.MeshStandardMaterial({ color: contColors[(row + col + 4) % contColors.length] })
         );
         stackBox.position.set(col * 9, 13, row * 24 + 10);
+        stackBox.castShadow = true;
         shipGroup.add(stackBox);
       }
     }
@@ -488,6 +507,7 @@ export function createRenderer(canvas) {
       new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 })
     );
     lhTower.position.y = 24;
+    lhTower.castShadow = true;
 
     const lhBeacon = new THREE.Mesh(
       new THREE.SphereGeometry(3.0, 12, 12),
@@ -519,6 +539,7 @@ export function createRenderer(canvas) {
     });
     const tower = new THREE.Mesh(new THREE.BoxGeometry(36, 125, 36), towerMat);
     tower.position.y = 62.5;
+    tower.castShadow = true;
 
     const spire = new THREE.Mesh(
       new THREE.ConeGeometry(1.6, 28, 8),
@@ -555,6 +576,7 @@ export function createRenderer(canvas) {
         const palmGroup = new THREE.Group();
         const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.45, 8.5, 7), palmTrunkMat);
         trunk.position.y = 4.25;
+        trunk.castShadow = true;
 
         // Multiple overlapping palm fronds
         const crown = new THREE.Group();
@@ -563,6 +585,7 @@ export function createRenderer(canvas) {
           frond.rotation.z = 0.55;
           frond.rotation.y = (f * Math.PI) / 3;
           frond.position.y = 8.5;
+          frond.castShadow = true;
           crown.add(frond);
         }
         palmGroup.add(trunk, crown);
@@ -572,6 +595,7 @@ export function createRenderer(canvas) {
         const poleGroup = new THREE.Group();
         const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 7.5, 6), lightPoleMat);
         pole.position.y = 3.75;
+        pole.castShadow = true;
 
         // Overhanging arm
         const arm = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 0.12), lightPoleMat);
@@ -662,10 +686,11 @@ export function createRenderer(canvas) {
       beaconGroup.visible = false;
     }
 
-    // Dynamic sun follow player for shadows
-    sunLight.position.set(playerX + 220, 110, playerZ + 260);
+    // Dynamic sun follow player for focused high-res shadow coverage
+    sunLight.position.set(playerX + 110, 85, playerZ + 120);
     sunLight.target.position.set(playerX, 0, playerZ);
     sunLight.target.updateMatrixWorld();
+    sunLight.shadow.camera.updateProjectionMatrix();
   }
 
   function render(dt) {

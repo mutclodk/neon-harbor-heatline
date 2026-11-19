@@ -234,8 +234,13 @@ export function generateCity(seed = 20261124) {
 
       // District specific props
       if (district.id === 'marina') {
+        // Glowing streetlamps on both sides of the boulevard
+        for (let lOffset of [20, 50]) {
+          props.push({ type: 'streetlight', x: blockX + lOffset, z: blockZ - 2 });
+          props.push({ type: 'streetlight', x: blockX + lOffset, z: blockZ + blockSize + 2 });
+        }
         // Lush palm rows along the boulevard sidewalks
-        for (let offset of [12, 38, 64]) {
+        for (let offset of [10, 35, 60]) {
           props.push({ type: 'palm', x: blockX + offset, z: blockZ - 2.5 });
           props.push({ type: 'palm', x: blockX + offset, z: blockZ + blockSize + 2.5 });
         }

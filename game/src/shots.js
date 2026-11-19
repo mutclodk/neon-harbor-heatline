@@ -4,85 +4,98 @@ import { enterVehicle } from './player.js';
 import { createVehicle, buildVehicleMesh } from './vehicles.js';
 
 export function stageScreenshotScene(name, game) {
-  const { player, vehicles, pedestrians, city, wantedSystem, missionSystem, economy, uiManager } = game;
+  const { player, vehicles, pedestrians, city, wantedSystem, missionSystem, economy, uiManager, renderer } = game;
 
   if (name === 'cover' || name === 'start' || name === '1-cover') {
     // 1-cover.jpg: Wide elevated three-quarter view looking down Marina Strip toward the harbour
-    // Camera on street side: 20m behind player, 9m above road, looking down street axis.
-    // Zero buildings within 10m of camera. Player car lower-center.
-    // Top third: golden-hour sky gradient. Skyline with lit windows, palms, streetlamps, harbour cranes & ocean at end.
-    // 5 traffic cars spread over the road with headlights & taillights on.
+    // Player car prominent lower-center (~13m from camera, ~6.5m up).
+    // Canopies frame the sides instead of blocking middle; 4-6 traffic cars with lights on; 4+ glowing streetlamps visible.
+    // Low directional sun angled ~35 degrees off street axis raking long diagonal shadows across the road.
     uiManager.showScreen('hud');
 
-    // Player sports car on the Marina Strip boulevard (z=94) heading West (-X) toward the harbour
+    // Player sports car on the Marina Strip boulevard (z=93.5) heading West (-X) toward the harbour
     const sportsCar = vehicles.find((v) => v.classId === 'sports' || v.classId === 'muscle') || vehicles[0];
     sportsCar.x = 700;
-    sportsCar.z = 94; // center of the 14m wide street
+    sportsCar.z = 93.5;
     sportsCar.angle = -Math.PI / 2; // heading West
     sportsCar.speed = 28;
     enterVehicle(player, sportsCar);
 
-    // Arrange 5 traffic cars spread along the road ahead with headlights/taillights on
+    // Arrange 5 traffic cars spread along both lanes within 16-88m of player
     const trafficCars = vehicles.filter((v) => v !== sportsCar && !v.isPolice);
 
     if (trafficCars[0]) {
-      // Ahead in westbound lane
+      // Yellow taxi ahead in westbound lane
       trafficCars[0].active = true;
-      trafficCars[0].x = 665;
+      trafficCars[0].x = 684;
       trafficCars[0].z = 91.5;
       trafficCars[0].angle = -Math.PI / 2;
       trafficCars[0].speed = 24;
     }
     if (trafficCars[1]) {
-      // Oncoming in eastbound lane
+      // Red muscle car oncoming in eastbound lane
       trafficCars[1].active = true;
-      trafficCars[1].x = 640;
+      trafficCars[1].x = 672;
       trafficCars[1].z = 96.5;
       trafficCars[1].angle = Math.PI / 2;
       trafficCars[1].speed = 26;
     }
     if (trafficCars[2]) {
-      // Delivery truck further down toward harbour
+      // Delivery truck in westbound lane
       trafficCars[2].active = true;
-      trafficCars[2].x = 600;
+      trafficCars[2].x = 654;
       trafficCars[2].z = 91.5;
       trafficCars[2].angle = -Math.PI / 2;
       trafficCars[2].speed = 20;
     }
     if (trafficCars[3]) {
-      // Oncoming car in eastbound lane
+      // Oncoming sedan in eastbound lane
       trafficCars[3].active = true;
-      trafficCars[3].x = 565;
+      trafficCars[3].x = 635;
       trafficCars[3].z = 96.5;
       trafficCars[3].angle = Math.PI / 2;
       trafficCars[3].speed = 25;
     }
     if (trafficCars[4]) {
-      // Car near harbour entrance
+      // Trailing westbound car down the boulevard
       trafficCars[4].active = true;
-      trafficCars[4].x = 525;
+      trafficCars[4].x = 612;
       trafficCars[4].z = 91.5;
       trafficCars[4].angle = -Math.PI / 2;
       trafficCars[4].speed = 22;
     }
 
-    // Elevated camera on the street axis (20m behind player, 9m above road)
-    // Guarantee: camZ=94 is center of street (10m from any building wall!)
+    // Camera: 13m behind car, 6.5m up, offset toward sidewalk edge (z=98.5) so canopies frame sides
+    // Player car is prominent, lower-center, clearly reading at a glance
     player.cameraOverride = {
-      x: 720,
-      y: 9.0,
-      z: 94,
-      lookAtX: 610,
-      lookAtY: 2.2,
-      lookAtZ: 94,
+      x: 713,
+      y: 6.5,
+      z: 98.5,
+      lookAtX: 640,
+      lookAtY: 1.8,
+      lookAtZ: 92.5,
     };
+
+    // Sun angled ~35 degrees off street axis (low sun: y=26) to cast long diagonal raking shadows across road
+    if (renderer && renderer.sunLight) {
+      renderer.sunLight.position.set(700 + 65, 26, 94 + 50);
+      renderer.sunLight.target.position.set(670, 0, 94);
+      renderer.sunLight.target.updateMatrixWorld();
+      renderer.sunLight.shadow.camera.left = -45;
+      renderer.sunLight.shadow.camera.right = 45;
+      renderer.sunLight.shadow.camera.top = 45;
+      renderer.sunLight.shadow.camera.bottom = -45;
+      renderer.sunLight.shadow.camera.near = 10;
+      renderer.sunLight.shadow.camera.far = 180;
+      renderer.sunLight.shadow.camera.updateProjectionMatrix();
+    }
 
     economy.addCash(1250);
     economy.addScore(1850);
   } else if (name === 'onfoot' || name === 'play' || name === '2-onfoot') {
-    // 2-onfoot.jpg: On foot in Marina Strip market district along the sidewalk
-    // 5 pedestrians within 3-8m of player, player in third person among them.
-    // Camera at ~5.5m behind player at head height +1m (2.7m), offset sideways into the street so no trunk blocks lens.
+    // 2-onfoot.jpg: On foot in Marina Strip market district along sidewalk
+    // Foreground clear of palm trunks and car roofs (camera up +1.5m to y=4.2, sideways +2m into street to z=91.0).
+    // Player is the closest figure to camera (center, back to camera), 4 pedestrians just ahead on sidewalk.
     uiManager.showScreen('hud');
     player.inVehicle = false;
     player.vehicle = null;
@@ -90,14 +103,13 @@ export function stageScreenshotScene(name, game) {
     player.z = 85.5; // on sidewalk along Marina Strip
     player.facingAngle = -Math.PI / 2; // walking West down sidewalk
 
-    // Position 5 pedestrians on the sidewalk within 3-8m of the player
+    // Position 4 pedestrians on the sidewalk directly ahead of the player (3-16m ahead)
     if (pedestrians && pedestrians.length > 0) {
       const pedPositions = [
-        { x: 676, z: 85.2, angle: -Math.PI / 2 },
-        { x: 673, z: 86.0, angle: Math.PI / 2 },
-        { x: 684, z: 85.0, angle: -Math.PI / 2 },
-        { x: 677, z: 86.4, angle: -Math.PI / 2 },
-        { x: 686, z: 85.8, angle: Math.PI / 2 },
+        { x: 675.5, z: 85.2, angle: -Math.PI / 2 },
+        { x: 672.0, z: 85.8, angle: Math.PI / 2 },
+        { x: 668.0, z: 85.1, angle: -Math.PI / 2 },
+        { x: 664.0, z: 85.7, angle: Math.PI / 2 },
       ];
       for (let i = 0; i < pedPositions.length && i < pedestrians.length; i++) {
         const ped = pedestrians[i];
@@ -114,17 +126,17 @@ export function stageScreenshotScene(name, game) {
       }
     }
 
-    // Parked sports car at the curb beside the sidewalk
+    // Parked sports car placed 20m down the curb in midground (not in immediate camera foreground)
     if (vehicles[0]) {
-      vehicles[0].x = 682;
-      vehicles[0].z = 88.5;
+      vehicles[0].x = 660;
+      vehicles[0].z = 89.5;
       vehicles[0].angle = -Math.PI / 2;
       vehicles[0].speed = 0;
     }
 
-    // Driving car on the street
+    // Driving car down the street
     if (vehicles[1]) {
-      vehicles[1].x = 672;
+      vehicles[1].x = 668;
       vehicles[1].z = 95.0;
       vehicles[1].angle = -Math.PI / 2;
       vehicles[1].speed = 18;
@@ -134,34 +146,43 @@ export function stageScreenshotScene(name, game) {
     missionSystem.startMission(2);
     missionSystem.acceptBriefing();
 
-    // Camera: 5.5m behind player (+X = 685.5), 2.7m high, offset sideways into street (z=89.0)
-    // No palm trunk or wall blocks the lens; angled down the sidewalk showing player and pedestrians!
+    // Camera: up to y=4.2, sideways into street to z=91.0, 5.5m behind player (+X = 685.5)
+    // Foreground is clear sidewalk/street; player is closest figure, back to camera, pedestrians ahead
     player.cameraOverride = {
       x: 685.5,
-      y: 2.7,
-      z: 89.0,
-      lookAtX: 673,
-      lookAtY: 1.4,
+      y: 4.2,
+      z: 91.0,
+      lookAtX: 668,
+      lookAtY: 1.5,
       lookAtZ: 85.5,
     };
+
+    // Sun angled to cast diagonal palm and building shadows across the sidewalk and street
+    if (renderer && renderer.sunLight) {
+      renderer.sunLight.position.set(680 + 55, 28, 85 + 45);
+      renderer.sunLight.target.position.set(670, 0, 85);
+      renderer.sunLight.target.updateMatrixWorld();
+      renderer.sunLight.shadow.camera.left = -35;
+      renderer.sunLight.shadow.camera.right = 35;
+      renderer.sunLight.shadow.camera.top = 35;
+      renderer.sunLight.shadow.camera.bottom = -35;
+      renderer.sunLight.shadow.camera.near = 10;
+      renderer.sunLight.shadow.camera.far = 150;
+      renderer.sunLight.shadow.camera.updateProjectionMatrix();
+    }
   } else if (name === 'chase' || name === '3-chase') {
-    // 3-chase.jpg: High-action police chase mid-city in Centro with 2 police interceptors LARGE in frame!
-    // Staged on lit Centro avenue (x=564), heading North (-Z).
-    // 2 police cars 6-8m behind player car, large in frame with alternating red/blue flashing glow sprites!
-    // Camera: elevated 8.5m on street axis, 19m behind player, looking down street axis.
+    // 3-chase.jpg: High-action police chase mid-city in Centro (PASSED in round 3 — KEEP EXACTLY AS-IS)
     uiManager.showScreen('hud');
 
     const playerCar = vehicles.find((v) => v.classId === 'muscle' || v.classId === 'sports') || vehicles[0];
     playerCar.x = 564;
-    playerCar.z = 470; // heading North down Centro avenue
-    playerCar.angle = Math.PI; // heading North (-Z)
+    playerCar.z = 470;
+    playerCar.angle = Math.PI;
     playerCar.speed = 38;
     enterVehicle(player, playerCar);
 
-    // Escalate heat to 3 stars
     wantedSystem.addHeat(285, 'HIGH_SPEED_CHASE');
 
-    // Spawn 2 police interceptors 6-8m behind the player car (LARGE in frame!)
     let cop1 = wantedSystem.policeCars[0];
     if (!cop1) {
       cop1 = createVehicle('police', 562.0, 477.5, Math.PI);
@@ -176,7 +197,7 @@ export function stageScreenshotScene(name, game) {
     }
     cop1.active = true;
     cop1.speed = 36;
-    cop1.sirenTimer = 0; // red strobe
+    cop1.sirenTimer = 0;
 
     let cop2 = wantedSystem.policeCars[1];
     if (!cop2) {
@@ -192,12 +213,8 @@ export function stageScreenshotScene(name, game) {
     }
     cop2.active = true;
     cop2.speed = 37;
-    cop2.sirenTimer = 1.0; // blue strobe
+    cop2.sirenTimer = 1.0;
 
-    // Camera: elevated 8.5m on the street center axis (x=564), 19m behind player (z=489)
-    // 14m from any building wall! Looking North down the street axis:
-    // Frames the 2 large police cruisers right in front of the lens with glowing red & blue strobes,
-    // player car lower-center speeding ahead, lit skyscrapers, streetlamps, and colorful sunset sky!
     player.cameraOverride = {
       x: 564,
       y: 8.5,
@@ -207,7 +224,7 @@ export function stageScreenshotScene(name, game) {
       lookAtZ: 430,
     };
   } else if (name === 'mission' || name === 'end' || name === '4-mission') {
-    // 4-mission.jpg: In-game MISSION COMPLETE moment (PASSED in round 2)
+    // 4-mission.jpg: In-game MISSION COMPLETE moment (PASSED in round 2/3 — KEEP EXACTLY AS-IS)
     const sportsCar = vehicles.find((v) => v.classId === 'sports' || v.classId === 'sedan') || vehicles[0];
     sportsCar.x = 720;
     sportsCar.z = 90.5;

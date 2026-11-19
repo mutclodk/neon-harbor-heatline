@@ -173,7 +173,7 @@ export function createRenderer(canvas) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.45;
+  renderer.toneMappingExposure = 1.35;
 
   const camera = new THREE.PerspectiveCamera(
     60,
@@ -182,30 +182,30 @@ export function createRenderer(canvas) {
     950
   );
 
-  // Lighting: Golden Sunset + Rich Ambient Fill (high visibility)
-  const hemiLight = new THREE.HemisphereLight(0xffedd5, 0x8b5cf6, 1.8);
+  // Lighting: High-contrast sunset illumination so shadows are clearly defined
+  const hemiLight = new THREE.HemisphereLight(0xffedd5, 0x8b5cf6, 0.85);
   scene.add(hemiLight);
 
-  const ambientLight = new THREE.AmbientLight(0xfdba74, 1.1);
+  const ambientLight = new THREE.AmbientLight(0xfdba74, 0.55);
   scene.add(ambientLight);
 
-  // Directional Sun casting long golden shadows across roads
-  const sunLight = new THREE.DirectionalLight(0xffedd5, 3.4);
-  sunLight.position.set(220, 95, 240); // low angle for long dramatic sun shadows
+  // Directional Sun with high shadow contrast
+  const sunLight = new THREE.DirectionalLight(0xffedd5, 3.8);
+  sunLight.position.set(220, 85, 240);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.width = 2048;
   sunLight.shadow.mapSize.height = 2048;
   sunLight.shadow.camera.near = 10;
-  sunLight.shadow.camera.far = 500;
-  sunLight.shadow.camera.left = -95;
-  sunLight.shadow.camera.right = 95;
-  sunLight.shadow.camera.top = 95;
-  sunLight.shadow.camera.bottom = -95;
-  sunLight.shadow.bias = -0.0005;
+  sunLight.shadow.camera.far = 400;
+  sunLight.shadow.camera.left = -60;
+  sunLight.shadow.camera.right = 60;
+  sunLight.shadow.camera.top = 60;
+  sunLight.shadow.camera.bottom = -60;
+  sunLight.shadow.bias = -0.0006;
   scene.add(sunLight);
-  scene.add(sunLight.target); // Essential in Three.js for target tracking!
+  scene.add(sunLight.target);
 
-  // Ocean Plane surrounding Port Solano with vibrant specular feel
+  // Ocean Plane surrounding Port Solano
   const oceanGeom = new THREE.PlaneGeometry(3600, 3600);
   const oceanMat = new THREE.MeshStandardMaterial({
     color: 0x0891b2,
@@ -217,7 +217,7 @@ export function createRenderer(canvas) {
   oceanMesh.position.set(CITY_GRID.totalWidth / 2, -0.4, CITY_GRID.totalHeight / 2);
   scene.add(oceanMesh);
 
-  // Ground base beneath city (warm base tone)
+  // Ground base beneath city
   const groundGeom = new THREE.PlaneGeometry(CITY_GRID.totalWidth + 180, CITY_GRID.totalHeight + 180);
   const groundMat = new THREE.MeshStandardMaterial({
     color: 0x334155,
@@ -230,7 +230,7 @@ export function createRenderer(canvas) {
   groundMesh.receiveShadow = true;
   scene.add(groundMesh);
 
-  // Waypoint Beacon in 3D world with vertical light column
+  // Waypoint Beacon in 3D world
   const beaconGroup = new THREE.Group();
   const beaconGeom = new THREE.CylinderGeometry(0.9, 0.9, 50, 8);
   const beaconMat = new THREE.MeshBasicMaterial({
@@ -247,7 +247,6 @@ export function createRenderer(canvas) {
   );
   beaconMarker.position.y = 3.8;
 
-  // Additive glow sprite at the base
   const beaconGlow = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: getGlowTexture(),
@@ -269,7 +268,7 @@ export function createRenderer(canvas) {
   function buildCityMeshes(city) {
     const { cols, rows, pitch, streetWidth, sidewalkWidth, blockSize, totalWidth, totalHeight } = CITY_GRID;
 
-    // 1. Roads: warm slate grey asphalt (visible, not black slab)
+    // 1. Roads: warm slate grey asphalt receiving shadows
     const roadMat = new THREE.MeshStandardMaterial({
       color: 0x475569, // warm slate grey
       roughness: 0.65,
@@ -277,7 +276,6 @@ export function createRenderer(canvas) {
     });
     const roadGroup = new THREE.Group();
 
-    // Road lines materials
     const yellowLineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
     const whiteLineMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
 
@@ -289,7 +287,6 @@ export function createRenderer(canvas) {
       road.receiveShadow = true;
       roadGroup.add(road);
 
-      // Yellow double center line
       const line = new THREE.Mesh(new THREE.PlaneGeometry(0.35, totalHeight), yellowLineMat);
       line.rotation.x = -Math.PI / 2;
       line.position.set(c * pitch, 0.03, totalHeight / 2);
@@ -304,7 +301,6 @@ export function createRenderer(canvas) {
       road.receiveShadow = true;
       roadGroup.add(road);
 
-      // Yellow double center line
       const line = new THREE.Mesh(new THREE.PlaneGeometry(totalWidth, 0.35), yellowLineMat);
       line.rotation.x = -Math.PI / 2;
       line.position.set(totalWidth / 2, 0.03, r * pitch);
@@ -317,18 +313,18 @@ export function createRenderer(canvas) {
         const ix = c * pitch;
         const iz = r * pitch;
 
-        // North crosswalk
         for (let s = -3; s <= 3; s++) {
           const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 2.8), whiteLineMat);
           stripe.rotation.x = -Math.PI / 2;
           stripe.position.set(ix + s * 1.5, 0.035, iz - streetWidth * 0.55);
+          stripe.receiveShadow = true;
           roadGroup.add(stripe);
         }
-        // East crosswalk
         for (let s = -3; s <= 3; s++) {
           const stripe = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.85), whiteLineMat);
           stripe.rotation.x = -Math.PI / 2;
           stripe.position.set(ix + streetWidth * 0.55, 0.035, iz + s * 1.5);
+          stripe.receiveShadow = true;
           roadGroup.add(stripe);
         }
       }
@@ -356,7 +352,7 @@ export function createRenderer(canvas) {
     }
     scene.add(sidewalkGroup);
 
-    // 3. Buildings with glowing procedural window textures & architectural details
+    // 3. Buildings with glowing procedural window textures
     const buildings = city.buildings;
     for (let i = 0; i < buildings.length; i++) {
       const b = buildings[i];
@@ -393,6 +389,7 @@ export function createRenderer(canvas) {
         new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5 })
       );
       acMesh.position.set(b.x, b.height + 1.1, b.z);
+      acMesh.castShadow = true;
       bGroup.add(acMesh);
 
       // Neon rooftop signs with additive bloom sprites
@@ -402,7 +399,6 @@ export function createRenderer(canvas) {
         const sign = new THREE.Mesh(new THREE.BoxGeometry(b.width * 0.65, 2.6, 0.5), signMat);
         sign.position.set(b.x, b.height + 2.2, b.z + b.depth / 2 - 0.4);
 
-        // Additive bloom sprite on sign
         const signGlow = new THREE.Sprite(
           new THREE.SpriteMaterial({
             map: glowTex,
@@ -421,7 +417,7 @@ export function createRenderer(canvas) {
       scene.add(bGroup);
     }
 
-    // 4. District Landmarks (Gantry Cranes, Container Freighter, Horizon Tower, Lighthouse)
+    // 4. Landmarks
     buildLandmarks();
 
     // 5. Props: Palm trees, streetlights with bloom sprites, containers
@@ -432,7 +428,6 @@ export function createRenderer(canvas) {
   }
 
   function buildLandmarks() {
-    // 1. Harbor Gantry Cranes (Old Harbor at x:120, z:120 and x:70, z:200)
     for (let cpos of [{ x: 120, z: 120 }, { x: 70, z: 200 }]) {
       const craneGroup = new THREE.Group();
       const steelMat = new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.85, roughness: 0.25 });
@@ -450,7 +445,6 @@ export function createRenderer(canvas) {
       boom.castShadow = true;
       craneGroup.add(boom);
 
-      // Warning beacon light on top
       const beaconSprite = new THREE.Sprite(
         new THREE.SpriteMaterial({
           map: glowTex,
@@ -467,7 +461,7 @@ export function createRenderer(canvas) {
       scene.add(craneGroup);
     }
 
-    // 2. Cargo Container Freighter moored at harbor docks (x:-60, z:140)
+    // Ship moored at docks
     const shipGroup = new THREE.Group();
     const hullMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.7 });
     const hullGeom = new THREE.BoxGeometry(32, 14, 180);
@@ -476,7 +470,6 @@ export function createRenderer(canvas) {
     hull.castShadow = true;
     shipGroup.add(hull);
 
-    // Ship bridge
     const bridgeGeom = new THREE.BoxGeometry(26, 22, 28);
     const bridgeMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
     const bridge = new THREE.Mesh(bridgeGeom, bridgeMat);
@@ -484,7 +477,6 @@ export function createRenderer(canvas) {
     bridge.castShadow = true;
     shipGroup.add(bridge);
 
-    // Ship container cargo stacks
     const contColors = [0x0891b2, 0xea580c, 0xfacc15, 0xd97706];
     for (let row = -1; row <= 2; row++) {
       for (let col = -1; col <= 1; col++) {
@@ -500,7 +492,7 @@ export function createRenderer(canvas) {
     shipGroup.position.set(-60, 0, 140);
     scene.add(shipGroup);
 
-    // 3. Marina Lighthouse (x:860, z:80)
+    // Lighthouse
     const lightGroup = new THREE.Group();
     const lhTower = new THREE.Mesh(
       new THREE.CylinderGeometry(4.0, 6.5, 48, 16),
@@ -530,7 +522,7 @@ export function createRenderer(canvas) {
     lightGroup.position.set(860, 0, 80);
     scene.add(lightGroup);
 
-    // 4. Centro Horizon Tower (x:560, z:520) - 125m Skyscraper
+    // Horizon Tower
     const towerGroup = new THREE.Group();
     const towerMat = new THREE.MeshStandardMaterial({
       color: 0x0284c7,
@@ -574,17 +566,17 @@ export function createRenderer(canvas) {
 
       if (p.type === 'palm') {
         const palmGroup = new THREE.Group();
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.45, 8.5, 7), palmTrunkMat);
-        trunk.position.y = 4.25;
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.32, 8.0, 7), palmTrunkMat);
+        trunk.position.y = 4.0;
         trunk.castShadow = true;
 
-        // Multiple overlapping palm fronds
+        // Palm fronds - reduced scale (~30% smaller) so canopies do not overwhelm the view
         const crown = new THREE.Group();
         for (let f = 0; f < 6; f++) {
-          const frond = new THREE.Mesh(new THREE.ConeGeometry(2.8, 1.8, 5), palmFrondMat);
+          const frond = new THREE.Mesh(new THREE.ConeGeometry(1.8, 1.3, 5), palmFrondMat);
           frond.rotation.z = 0.55;
           frond.rotation.y = (f * Math.PI) / 3;
-          frond.position.y = 8.5;
+          frond.position.y = 8.0;
           frond.castShadow = true;
           crown.add(frond);
         }
@@ -597,14 +589,12 @@ export function createRenderer(canvas) {
         pole.position.y = 3.75;
         pole.castShadow = true;
 
-        // Overhanging arm
         const arm = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 0.12), lightPoleMat);
         arm.position.set(0.7, 7.4, 0);
 
         const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), lightBulbMat);
         bulb.position.set(1.4, 7.3, 0);
 
-        // Additive warm glow bloom sprite
         const lampGlow = new THREE.Sprite(
           new THREE.SpriteMaterial({
             map: glowTex,
@@ -613,7 +603,7 @@ export function createRenderer(canvas) {
             depthWrite: false,
           })
         );
-        lampGlow.scale.set(6.0, 6.0, 1);
+        lampGlow.scale.set(7.0, 7.0, 1);
         lampGlow.position.set(1.4, 7.3, 0);
 
         poleGroup.add(pole, arm, bulb, lampGlow);
@@ -666,7 +656,6 @@ export function createRenderer(canvas) {
   }
 
   function updateVisuals(dt, waypoint, playerX, playerZ) {
-    // Animate tokens
     for (let i = 0; i < tokenMeshes.length; i++) {
       const item = tokenMeshes[i];
       if (item.token.collected) {
@@ -677,7 +666,6 @@ export function createRenderer(canvas) {
       }
     }
 
-    // Update waypoint beacon position
     if (waypoint) {
       beaconGroup.visible = true;
       beaconGroup.position.set(waypoint.x, 0, waypoint.z);
@@ -686,7 +674,7 @@ export function createRenderer(canvas) {
       beaconGroup.visible = false;
     }
 
-    // Dynamic sun follow player for focused high-res shadow coverage
+    // Default dynamic sun tracking
     sunLight.position.set(playerX + 110, 85, playerZ + 120);
     sunLight.target.position.set(playerX, 0, playerZ);
     sunLight.target.updateMatrixWorld();
@@ -709,6 +697,7 @@ export function createRenderer(canvas) {
     scene,
     camera,
     renderer,
+    sunLight, // Expose sunLight for custom shot raking angle
     buildCityMeshes,
     updateVisuals,
     render,

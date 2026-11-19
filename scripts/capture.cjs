@@ -15,6 +15,11 @@ const SHOTS = [
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH ||
   path.join(process.env.HOME, '.cache/ms-playwright/chromium-1255/chrome-linux64/chrome');
 
+const requestedShots = process.argv.slice(2);
+const filteredShots = requestedShots.length > 0
+  ? SHOTS.filter((s) => requestedShots.some((r) => s.name.includes(r) || s.query.includes(r)))
+  : SHOTS;
+
 async function captureAll() {
   console.log('Launching headless Chromium from:', CHROMIUM_PATH);
   const browser = await chromium.launch({
@@ -33,7 +38,7 @@ async function captureAll() {
     fs.mkdirSync(screenshotsDir, { recursive: true });
   }
 
-  for (const shot of SHOTS) {
+  for (const shot of filteredShots) {
     console.log(`\nCapturing ${shot.name} via ${shot.query}...`);
     const page = await browser.newPage({
       viewport: { width: 1280, height: 720 },

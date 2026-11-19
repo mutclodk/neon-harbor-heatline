@@ -1,61 +1,435 @@
-// Every tuning number and colour in one place. The playfield is a fixed 1280x720 logical area;
-// the renderer scales it to the window, so no rule below depends on the screen size.
+// NEON HARBOR: HEATLINE - Game Configuration and Data Specifications
+// All physical constants, city grid parameters, vehicle classes, missions, wanted levels, and palettes.
 
-export const FIELD = { width: 1280, height: 720, groundY: 664 };
+export const STEP = 1 / 60; // 60 Hz fixed simulation timestep
+export const DEFAULT_CITY_SEED = 20261124;
 
-/** The simulation's fixed step, in seconds: 60 updates a second whatever the display's rate. */
-export const STEP = 1 / 60;
-
-export const PLAYER = {
-  width: 72,
-  height: 24,
-  speed: 560,
-  invulnerable: 1.5,
+export const CITY_GRID = {
+  cols: 12,
+  rows: 10,
+  blockSize: 80,
+  streetWidth: 14,
+  sidewalkWidth: 3,
+  get pitch() {
+    return this.blockSize + this.streetWidth;
+  },
+  get totalWidth() {
+    return this.cols * this.pitch;
+  },
+  get totalHeight() {
+    return this.rows * this.pitch;
+  },
 };
 
-export const LIVES = 3;
+export const DISTRICTS = [
+  {
+    id: 'harbor',
+    name: 'Old Harbor',
+    colStart: 0,
+    colEnd: 4,
+    rowStart: 0,
+    rowEnd: 4,
+    color: '#d96b27',
+    groundColor: '#303841',
+    fogColor: '#453833',
+    fogDensity: 0.0035,
+    minHeight: 12,
+    maxHeight: 28,
+    landmark: 'Harbor Gantry Crane',
+    landmarkPos: { x: 120, z: 120 },
+    garagePos: { x: 180, z: 240 },
+    ambientSpeed: 24,
+    trafficDensity: 0.8,
+  },
+  {
+    id: 'marina',
+    name: 'Marina Strip',
+    colStart: 5,
+    colEnd: 11,
+    rowStart: 0,
+    rowEnd: 3,
+    color: '#ff7597',
+    groundColor: '#2b3a42',
+    fogColor: '#4d3a4b',
+    fogDensity: 0.0028,
+    minHeight: 18,
+    maxHeight: 45,
+    landmark: 'Marina Lighthouse',
+    landmarkPos: { x: 860, z: 80 },
+    hospitalPos: { x: 740, z: 220 },
+    ambientSpeed: 30,
+    trafficDensity: 1.2,
+  },
+  {
+    id: 'centro',
+    name: 'Centro (Downtown)',
+    colStart: 4,
+    colEnd: 8,
+    rowStart: 4,
+    rowEnd: 7,
+    color: '#38bdf8',
+    groundColor: '#202630',
+    fogColor: '#243044',
+    fogDensity: 0.003,
+    minHeight: 45,
+    maxHeight: 110,
+    landmark: 'Centro Horizon Tower',
+    landmarkPos: { x: 560, z: 520 },
+    policeHqPos: { x: 440, z: 460 },
+    ambientSpeed: 28,
+    trafficDensity: 1.4,
+  },
+  {
+    id: 'alto',
+    name: 'Barrio Alto',
+    colStart: 0,
+    colEnd: 3,
+    rowStart: 5,
+    rowEnd: 9,
+    color: '#f59e0b',
+    groundColor: '#362f2d',
+    fogColor: '#42362b',
+    fogDensity: 0.0032,
+    minHeight: 10,
+    maxHeight: 22,
+    landmark: 'Alto Mirador',
+    landmarkPos: { x: 100, z: 760 },
+    hideoutPos: { x: 200, z: 840 },
+    ambientSpeed: 26,
+    trafficDensity: 0.7,
+  },
+  {
+    id: 'flats',
+    name: 'Industrial Flats',
+    colStart: 9,
+    colEnd: 11,
+    rowStart: 4,
+    rowEnd: 9,
+    color: '#eab308',
+    groundColor: '#25292e',
+    fogColor: '#3d3c34',
+    fogDensity: 0.004,
+    minHeight: 14,
+    maxHeight: 32,
+    landmark: 'Shipyard Smokestacks',
+    landmarkPos: { x: 980, z: 740 },
+    stuntYardPos: { x: 1020, z: 620 },
+    ambientSpeed: 25,
+    trafficDensity: 0.9,
+  },
+];
 
-export const BLOCK = {
-  minWidth: 40,
-  maxWidth: 110,
-  height: 36,
-  speed: 240,
-  speedPerLevel: 30,
-  speedJitter: 90,
-  interval: 0.55,
-  intervalScale: 0.88,
-  minInterval: 0.14,
-  dodgePoints: 1,
+export const VEHICLE_CLASSES = {
+  hatch: {
+    id: 'hatch',
+    name: 'Sol Hatch',
+    category: 'Compact',
+    mass: 1100,
+    topSpeed: 28, // m/s (~100 km/h)
+    reverseSpeed: 10,
+    accel: 18,
+    brakeDecel: 24,
+    grip: 0.88,
+    driftGrip: 0.45,
+    turnSpeed: 2.8,
+    length: 3.8,
+    width: 1.8,
+    height: 1.4,
+    wheelBase: 2.3,
+    maxHp: 80,
+    price: 0,
+    colorPalette: ['#38bdf8', '#fb7185', '#34d399', '#facc15', '#94a3b8'],
+  },
+  sedan: {
+    id: 'sedan',
+    name: 'Meridian 4D',
+    category: 'Sedan',
+    mass: 1450,
+    topSpeed: 34, // m/s (~122 km/h)
+    reverseSpeed: 12,
+    accel: 22,
+    brakeDecel: 26,
+    grip: 0.84,
+    driftGrip: 0.42,
+    turnSpeed: 2.5,
+    length: 4.6,
+    width: 1.9,
+    height: 1.45,
+    wheelBase: 2.7,
+    maxHp: 100,
+    price: 450,
+    colorPalette: ['#e2e8f0', '#0ea5e9', '#64748b', '#475569', '#1e293b'],
+  },
+  sports: {
+    id: 'sports',
+    name: 'Vela GT',
+    category: 'Sports',
+    mass: 1250,
+    topSpeed: 48, // m/s (~172 km/h)
+    reverseSpeed: 15,
+    accel: 36,
+    brakeDecel: 34,
+    grip: 0.94,
+    driftGrip: 0.52,
+    turnSpeed: 3.2,
+    length: 4.4,
+    width: 2.0,
+    height: 1.25,
+    wheelBase: 2.6,
+    maxHp: 90,
+    price: 1500,
+    colorPalette: ['#f43f5e', '#f97316', '#e0e7ff', '#10b981', '#06b6d4'],
+  },
+  muscle: {
+    id: 'muscle',
+    name: 'Barracuda-9',
+    category: 'Muscle',
+    mass: 1600,
+    topSpeed: 42, // m/s (~151 km/h)
+    reverseSpeed: 14,
+    accel: 32,
+    brakeDecel: 22,
+    grip: 0.70, // low rear grip, great for slides
+    driftGrip: 0.35,
+    turnSpeed: 2.7,
+    length: 4.8,
+    width: 2.0,
+    height: 1.35,
+    wheelBase: 2.8,
+    maxHp: 110,
+    price: 900,
+    colorPalette: ['#7c2d12', '#b91c1c', '#1e1b4b', '#18181b', '#d97706'],
+  },
+  truck: {
+    id: 'truck',
+    name: 'Dockmaster',
+    category: 'Truck',
+    mass: 2800,
+    topSpeed: 26, // m/s (~94 km/h)
+    reverseSpeed: 8,
+    accel: 14,
+    brakeDecel: 20,
+    grip: 0.82,
+    driftGrip: 0.50,
+    turnSpeed: 2.0,
+    length: 6.2,
+    width: 2.3,
+    height: 2.4,
+    wheelBase: 3.8,
+    maxHp: 180,
+    price: 600,
+    colorPalette: ['#0369a1', '#b45309', '#15803d', '#374151', '#4b5563'],
+  },
+  police: {
+    id: 'police',
+    name: 'CPD Interceptor',
+    category: 'Police',
+    mass: 1550,
+    topSpeed: 45, // m/s (~162 km/h)
+    reverseSpeed: 14,
+    accel: 32,
+    brakeDecel: 32,
+    grip: 0.90,
+    driftGrip: 0.48,
+    turnSpeed: 3.0,
+    length: 4.7,
+    width: 1.95,
+    height: 1.5,
+    wheelBase: 2.75,
+    maxHp: 130,
+    price: 0,
+    colorPalette: ['#0f172a'], // Black & white with siren bar
+  },
 };
 
-export const COIN = {
-  size: 24,
-  speed: 190,
-  speedPerLevel: 14,
-  interval: 1.4,
-  intervalJitter: 0.8,
-  points: 10,
+export const PLAYER_CONFIG = {
+  walkSpeed: 3.2, // m/s
+  sprintSpeed: 6.0, // m/s
+  maxHealth: 100,
+  maxStamina: 100,
+  staminaDrain: 20, // per sec
+  staminaRegen: 15, // per sec
+  radius: 0.45,
+  height: 1.8,
+  interactDistance: 3.5,
 };
 
-/** Seconds of play per level, and the last level: speeds and spawn rates stop growing there. */
-export const LEVEL = { seconds: 12, max: 12 };
+export const WEAPON_CONFIG = {
+  name: '9mm Service Pistol',
+  fireRate: 0.22, // sec between shots
+  damage: 35,
+  range: 75, // meters
+  heatPerShot: 30,
+};
 
-/** How many falling things can exist at once; the pool is allocated once, at boot. */
-export const POOL_SIZE = 64;
+export const WANTED_CONFIG = {
+  maxHeat: 500,
+  stars: [
+    { star: 1, minHeat: 1, policeUnits: 1, ramming: false, roadblocks: false },
+    { star: 2, minHeat: 101, policeUnits: 2, ramming: false, roadblocks: false },
+    { star: 3, minHeat: 201, policeUnits: 3, ramming: true, roadblocks: true },
+    { star: 4, minHeat: 301, policeUnits: 4, ramming: true, roadblocks: true },
+    { star: 5, minHeat: 401, policeUnits: 5, ramming: true, roadblocks: true },
+  ],
+  decayRateOutOfSight: 5.0, // heat / sec
+  decayRateHiding: 2.5,
+  vehicleChangeHeatReduction: 60,
+  offenceHeat: {
+    stealVehicle: 40,
+    hitTraffic: 35,
+    hitPedestrian: 60,
+    hitPolice: 85,
+    fireGun: 30,
+    damageProperty: 10,
+    trespass: 50,
+  },
+  bustedDuration: 3.0, // sec boxed before arrest
+  bustedDistance: 4.0, // meters from police unit
+};
+
+export const MISSIONS = [
+  {
+    id: 1,
+    title: 'First Run',
+    district: 'Old Harbor',
+    tagline: 'Deliver cargo container from Old Harbor to Marina Strip drop-off.',
+    briefing: 'Rafi, the dock boss wants this container at the Marina fast. Take the Dockmaster truck, avoid wrecking it, and get it done within 3 minutes.',
+    targetClass: 'truck',
+    startPos: { x: 180, z: 240 },
+    waypointPos: { x: 740, z: 120 },
+    timeLimit: 180,
+    minVehicleHpPercent: 20,
+    cashReward: 350,
+    scoreReward: 600,
+    unlocks: [2],
+    requiredClass: 'truck',
+  },
+  {
+    id: 2,
+    title: 'Neon Post',
+    district: 'Marina Strip',
+    tagline: 'Collect 3 hidden contraband dead-drops along Marina and deliver to Centro.',
+    briefing: 'Three dead-drops on foot along the Marina boardwalk. Grab all three packages before the courier leaves, then race them to Centro Tower.',
+    pickups: [
+      { x: 620, z: 80, collected: false },
+      { x: 780, z: 80, collected: false },
+      { x: 920, z: 80, collected: false },
+    ],
+    deliveryPos: { x: 560, z: 520 },
+    timeLimit: 240,
+    cashReward: 500,
+    scoreReward: 900,
+    unlocks: [3],
+  },
+  {
+    id: 3,
+    title: 'Hot Metal',
+    district: 'Centro',
+    tagline: 'Steal the tuned Vela GT from a guarded lot and lose the 3-star heat in Barrio Alto.',
+    briefing: 'The Syndicate left a prototype Vela GT parked in Centro guarded lot. Break in, trigger the silent alarm, shake the police, and stash it at our Barrio Alto hideout.',
+    stealPos: { x: 620, z: 460 },
+    hideoutPos: { x: 200, z: 840 },
+    spawnStars: 3,
+    timeLimit: 300,
+    cashReward: 850,
+    scoreReward: 1400,
+    unlocks: [4],
+    rewardVehicle: 'sports',
+  },
+  {
+    id: 4,
+    title: 'Harbor Heat',
+    district: 'Industrial Flats',
+    tagline: 'Transport high-risk industrial equipment through police roadblocks to the Shipyard.',
+    briefing: 'Heavy police perimeter between Centro and Industrial Flats. Ram through the checkpoints with the Dockmaster and deliver to the crane.',
+    startPos: { x: 200, z: 320 },
+    targetPos: { x: 980, z: 740 },
+    spawnStars: 2,
+    escalateStars: 3,
+    timeLimit: 220,
+    minVehicleHpPercent: 25,
+    cashReward: 1000,
+    scoreReward: 1600,
+    unlocks: [5],
+  },
+  {
+    id: 5,
+    title: 'Alto Run',
+    district: 'Barrio Alto',
+    tagline: 'High-speed hill-climb checkpoint time trial across winding switchbacks.',
+    briefing: 'Eight checkpoint gates carved into the hills of Barrio Alto. Beat 1:45 for Gold, 2:15 for Silver, 2:45 for Bronze.',
+    checkpoints: [
+      { x: 120, z: 620 },
+      { x: 120, z: 720 },
+      { x: 220, z: 720 },
+      { x: 220, z: 820 },
+      { x: 120, z: 820 },
+      { x: 220, z: 920 },
+      { x: 320, z: 820 },
+      { x: 320, z: 620 },
+    ],
+    goldTime: 105,
+    silverTime: 135,
+    bronzeTime: 165,
+    cashReward: 700,
+    scoreReward: 1200,
+    unlocks: [6],
+  },
+  {
+    id: 6,
+    title: 'Flats Demolition',
+    district: 'Industrial Flats',
+    tagline: 'Demolish 10 marked syndicate smuggling crates in the stunt yard under 2 minutes.',
+    briefing: 'Syndicate contraband crates are staged in the Industrial Flats stunt yard. Smash 10 targets with your vehicle before the clean-up crew arrives.',
+    yardCenter: { x: 1020, z: 620 },
+    targetCount: 10,
+    timeLimit: 120,
+    cashReward: 900,
+    scoreReward: 1500,
+    unlocks: [7],
+  },
+  {
+    id: 7,
+    title: 'Heatline (Finale)',
+    district: 'All Districts',
+    tagline: 'The Grand Finale: 3-leg relay across Port Solano under constant 4-star police pressure.',
+    briefing: 'Rafi, tonight we settle all debts. Leg 1: Extract our contact from Centro. Leg 2: Retrieve the bearer bonds at Marina. Leg 3: Escape to the Old Harbor getaway boat with the entire CPD on your tail!',
+    legs: [
+      { id: 1, name: 'Extract Contact (Centro)', pos: { x: 500, z: 520 }, heat: 250 },
+      { id: 2, name: 'Secure Bonds (Marina)', pos: { x: 820, z: 120 }, heat: 350 },
+      { id: 3, name: 'Getaway Pier (Old Harbor)', pos: { x: 80, z: 80 }, heat: 450 },
+    ],
+    timeLimit: 360,
+    cashReward: 2500,
+    scoreReward: 3500,
+    unlocks: [],
+  },
+];
 
 export const PALETTE = {
-  backdrop: '#11141b',
-  sky: '#1b1f2a',
-  ground: '#2a3040',
-  player: '#4fc3f7',
-  block: '#e5534b',
-  coin: '#f2c94c',
-  panel: '#252b38',
-  text: '#eef1f5',
-  muted: '#8b93a3',
+  skySun: '#ff9052',
+  skyHorizon: '#fd5e53',
+  skyZenith: '#1e1b4b',
+  oceanTeal: '#0891b2',
+  oceanDeep: '#0e7490',
+  asphalt: '#1e242d',
+  roadMarking: '#e2e8f0',
+  sidewalk: '#334155',
+  curb: '#64748b',
+  streetlightPole: '#475569',
+  streetlightGlow: '#fef08a',
+  palmTrunk: '#78350f',
+  palmFrond: '#15803d',
+  neonPink: '#f43f5e',
+  neonTeal: '#06b6d4',
+  neonGold: '#eab308',
+  neonLime: '#84cc16',
+  hudBg: 'rgba(15, 23, 42, 0.82)',
+  hudBorder: '#0284c7',
+  hudText: '#f8fafc',
+  hudAccent: '#38bdf8',
+  hudGold: '#facc15',
+  hudDanger: '#ef4444',
 };
 
-export const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
-
-/** Where the best score is kept between visits (this browser only). */
-export const BEST_KEY = 'block-dodger.best';
+export const SAVE_STORAGE_KEY = 'neon-harbor-heatline-save.v1';

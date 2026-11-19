@@ -1,53 +1,79 @@
-// Keyboard and pointer input. Held keys give a steering direction; one-shot presses (start or
-// restart, pause) are queued as bit flags and taken once by the loop, so a press between two
-// frames is never lost and never counted twice.
+// Keyboard and mouse input handling for player movement, driving, combat, and menus.
 
-export const ACTION_CONFIRM = 1;
-export const ACTION_PAUSE = 2;
+export function createInput(canvas) {
+  const keys = new Set();
+  let interactJustPressed = false;
+  let pauseJustPressed = false;
+  let fireJustPressed = false;
+  let lookDeltaX = 0;
+  let lookDeltaY = 0;
+  let isPointerLocked = false;
 
-const LEFT = new Set(['ArrowLeft', 'KeyA']);
-const RIGHT = new Set(['ArrowRight', 'KeyD']);
-const CONFIRM = new Set(['Space', 'Enter']);
-const PAUSE = new Set(['KeyP', 'Escape']);
+  function onKeyDown(e) {
+    keys.add(e.code);
 
-export function createInput(target) {
-  let left = false;
-  let right = false;
-  let actions = 0;
+    if (e.code === 'KeyE') interactJustPressed = true;
+    if (e.code === 'KeyP' || e.code === 'Escape') pauseJustPressed = true;
+    if (e.code === 'Space' || e.code === 'KeyF') fireJustPressed = true;
+  }
 
-  window.addEventListener('keydown', (event) => {
-    if (LEFT.has(event.code)) left = true;
-    else if (RIGHT.has(event.code)) right = true;
-    else if (CONFIRM.has(event.code)) {
-      if (!event.repeat) actions |= ACTION_CONFIRM;
-    } else if (PAUSE.has(event.code)) {
-      if (!event.repeat) actions |= ACTION_PAUSE;
-    } else return;
-    event.preventDefault();
-  });
-  window.addEventListener('keyup', (event) => {
-    if (LEFT.has(event.code)) left = false;
-    else if (RIGHT.has(event.code)) right = false;
-  });
-  // A key released while the tab is hidden never sends keyup: let go of everything on blur.
-  window.addEventListener('blur', () => {
-    left = false;
-    right = false;
-  });
-  target.addEventListener('pointerdown', () => {
-    actions |= ACTION_CONFIRM;
-  });
+  function onKeyUp(e) {
+    keys.delete(e.code);
+  }
 
-  return {
-    /** -1 for left, 1 for right, 0 for neither or both. */
-    direction() {
-      return (right ? 1 : 0) - (left ? 1 : 0);
-    },
-    /** The one-shot presses since the last call, as ACTION_* flags. */
-    takeActions() {
-      const taken = actions;
-      actions = 0;
-      return taken;
-    },
-  };
+  function onMouseMove(e) {
+    if (isPointerLocked || e.buttons === 1 || e.buttons === 2) {
+      lookDeltaX += e.movementX || 0;
+      lookDeltaY += e.movementY || 0;
+    }
+  }
+
+  function onMouseDown(e) {
+    if (e.button === 0) {
+      fireJustPressed = true;
+    }
+  }
+
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mousedown', onMouseDown);
+
+  function poll() {
+    let moveX = 0;
+    let moveY = 0;
+
+    if (keys.has('KeyA') || keys.has('ArrowLeft')) moveX -= 1;
+    if (keys.has('KeyD') || keys.has('ArrowRight')) moveX += 1;
+    if (keys.has('KeyW') || keys.has('ArrowUp')) moveY += 1;
+    if (keys.has('KeyS') || keys.has('ArrowDown')) moveY -= 1;
+
+    const sprint = keys.has('ShiftLeft') || keys.has('ShiftRight');
+    const handbrake = keys.has('Space');
+
+    const frame = {
+      moveX,
+      moveY,
+      throttle: moveY,
+      steer: moveX,
+      sprint,
+      handbrake,
+      interactJustPressed,
+      pauseJustPressed,
+      fireJustPressed,
+      lookX: lookDeltaX,
+      lookY: lookDeltaY,
+    };
+
+    // Reset single-frame triggers
+    interactJustPressed = false;
+    pauseJustPressed = false;
+    fireJustPressed = false;
+    lookDeltaX = 0;
+    lookDeltaY = 0;
+
+    return frame;
+  }
+
+  return { poll };
 }

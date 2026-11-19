@@ -50,27 +50,20 @@ export function buildVehicleMesh(vehicle) {
   const glowTex = getGlowTexture();
   const beamTex = getHeadlightBeamTexture();
 
-  const bodyMat = new THREE.MeshStandardMaterial({
+  const bodyMat = new THREE.MeshLambertMaterial({
     color: new THREE.Color(vehicle.color),
-    metalness: 0.7,
-    roughness: 0.3,
   });
 
-  const blackMat = new THREE.MeshStandardMaterial({
+  const blackMat = new THREE.MeshLambertMaterial({
     color: 0x111827,
-    roughness: 0.85,
   });
 
-  const chromeMat = new THREE.MeshStandardMaterial({
+  const chromeMat = new THREE.MeshLambertMaterial({
     color: 0xe2e8f0,
-    metalness: 0.95,
-    roughness: 0.1,
   });
 
-  const glassMat = new THREE.MeshStandardMaterial({
+  const glassMat = new THREE.MeshLambertMaterial({
     color: 0x0f172a,
-    roughness: 0.1,
-    metalness: 0.9,
     transparent: true,
     opacity: 0.88,
   });
@@ -105,10 +98,8 @@ export function buildVehicleMesh(vehicle) {
     const cargoLen = len * 0.6;
     const cargoHgt = hgt * 1.25;
     const cargoGeom = new THREE.BoxGeometry(wid * 1.05, cargoHgt, cargoLen);
-    const cargoMat = new THREE.MeshStandardMaterial({
+    const cargoMat = new THREE.MeshLambertMaterial({
       color: 0x0284c7, // vibrant container teal
-      roughness: 0.55,
-      metalness: 0.25,
     });
     const cargoMesh = new THREE.Mesh(cargoGeom, cargoMat);
     cargoMesh.position.set(0, cargoHgt / 2 + wheelR * 0.7, -len * 0.18);

@@ -233,18 +233,32 @@ export function generateCity(seed = 20261124) {
       props.push({ type: 'streetlight', x: blockX + blockSize + 2, z: blockZ + blockSize + 2 });
 
       // District specific props
-      if (district.id === 'marina') {
+      if (district.id === 'marina' || (district.id === 'harbor' && r === 1)) {
         // Glowing streetlamps on both sides of the boulevard
         for (let lOffset of [20, 50]) {
           props.push({ type: 'streetlight', x: blockX + lOffset, z: blockZ - 2 });
           props.push({ type: 'streetlight', x: blockX + lOffset, z: blockZ + blockSize + 2 });
         }
-        // Lush palm rows along the boulevard sidewalks
-        for (let offset of [10, 35, 60]) {
+        // Lush palm rows along the boulevard sidewalks right to the corners
+        for (let offset of [3, 20, 40, 60, 77]) {
           props.push({ type: 'palm', x: blockX + offset, z: blockZ - 2.5 });
           props.push({ type: 'palm', x: blockX + offset, z: blockZ + blockSize + 2.5 });
         }
-      } else if (district.id === 'centro') {
+      }
+
+      // Coastal avenue palm trees along both sidewalks (c = 0)
+      if (c === 0 && (district.id === 'harbor' || district.id === 'marina')) {
+        // Promenade palms along the harbour quayside edge
+        for (let zOffset of [14, 38, 62, 86]) {
+          props.push({ type: 'palm', x: -7.2, z: blockZ + zOffset });
+        }
+        // East sidewalk palms
+        for (let zOffset of [18, 42, 66]) {
+          props.push({ type: 'palm', x: blockX - 2.5, z: blockZ + zOffset });
+        }
+      }
+
+      if (district.id === 'centro') {
         // Plaza palm trees at block frontages
         props.push({ type: 'palm', x: blockX + blockSize / 2, z: blockZ - 2.5 });
         props.push({ type: 'palm', x: blockX + blockSize / 2, z: blockZ + blockSize + 2.5 });

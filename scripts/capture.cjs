@@ -1,7 +1,12 @@
 // Automated screenshot capture script for NEON HARBOR: HEATLINE
 // Loads the 4 required scenes (?shot=cover/onfoot/chase/mission) and saves JPEGs to screenshots/
 
-const { chromium } = require('playwright-core');
+let chromium;
+try {
+  chromium = require('playwright-core').chromium;
+} catch {
+  chromium = require('/home/hatch/.npm/_npx/e41f203b7505f1fb/node_modules/playwright-core').chromium;
+}
 const fs = require('node:fs');
 const path = require('node:path');
 

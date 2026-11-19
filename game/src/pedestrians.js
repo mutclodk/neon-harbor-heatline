@@ -37,10 +37,10 @@ export function createPedestrian(x, z, angle = 0, shirtColor = null) {
 export function buildPedestrianMesh(ped) {
   const group = new THREE.Group();
 
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0xfbcfe8, roughness: 0.6 });
-  const shirtMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(ped.shirtColor), roughness: 0.5 });
-  const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
-  const hairMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.9 });
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xfbcfe8 });
+  const shirtMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(ped.shirtColor) });
+  const pantsMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+  const hairMat = new THREE.MeshLambertMaterial({ color: 0x18181b });
 
   // Torso
   const torsoGeom = new THREE.BoxGeometry(0.42, 0.55, 0.22);

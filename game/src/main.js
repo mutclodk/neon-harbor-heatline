@@ -1,5 +1,6 @@
 // NEON HARBOR: HEATLINE - Main bootstrap and fixed-timestep game loop.
 import * as THREE from 'three';
+window.THREE = THREE;
 import { STEP, DEFAULT_CITY_SEED, SAVE_STORAGE_KEY } from './config.js';
 import { createRandom } from './random.js';
 import { generateCity, getDistrictAt } from './city.js';
@@ -37,6 +38,7 @@ const uiContainer = document.getElementById('ui');
 // Core Subsystems
 const renderer = createRenderer(canvas);
 renderer.buildCityMeshes(city);
+window.__game = { renderer, city };
 
 const audio = createAudioSystem();
 const input = createInput(canvas);

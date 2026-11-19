@@ -7,86 +7,90 @@ export function stageScreenshotScene(name, game) {
   const { player, vehicles, pedestrians, city, wantedSystem, missionSystem, economy, uiManager, renderer } = game;
 
   if (name === 'cover' || name === 'start' || name === '1-cover') {
-    // 1-cover.jpg: Wide elevated three-quarter view looking down Marina Strip toward the harbour
-    // Player car prominent lower-center (~13m from camera, ~6.5m up).
-    // Canopies frame the sides instead of blocking middle; 4-6 traffic cars with lights on; 4+ glowing streetlamps visible.
-    // Low directional sun angled ~35 degrees off street axis raking long diagonal shadows across the road.
+    // 1-cover.jpg: Old Harbor waterfront boulevard overlooking the harbor bay (x=0, z=94)
+    // Open water, moored cargo ship with colorful container stacks, and orange gantry cranes in frame.
+    // Player sports car prominent in foreground (lower-center), with 5 live AI traffic cars across lanes.
+    // Golden-hour sun raking long diagonal palm and building shadows across asphalt and sidewalks.
     uiManager.showScreen('hud');
 
-    // Player sports car on the Marina Strip boulevard (z=93.5) heading West (-X) toward the harbour
+    // Player sports car cruising North along the coastal harbor avenue
     const sportsCar = vehicles.find((v) => v.classId === 'sports' || v.classId === 'muscle') || vehicles[0];
-    sportsCar.x = 700;
-    sportsCar.z = 93.5;
-    sportsCar.angle = -Math.PI / 2; // heading West
+    sportsCar.x = 1.0;
+    sportsCar.z = 82.0;
+    sportsCar.angle = Math.PI; // heading North (-Z)
     sportsCar.speed = 28;
     enterVehicle(player, sportsCar);
 
-    // Arrange 5 traffic cars spread along both lanes within 16-88m of player
+    // Arrange 5 traffic cars across visible lanes with headlights & taillights on
     const trafficCars = vehicles.filter((v) => v !== sportsCar && !v.isPolice);
 
     if (trafficCars[0]) {
-      // Yellow taxi ahead in westbound lane
+      // Yellow taxi ahead in northbound lane toward Marina
       trafficCars[0].active = true;
-      trafficCars[0].x = 684;
-      trafficCars[0].z = 91.5;
-      trafficCars[0].angle = -Math.PI / 2;
+      trafficCars[0].x = 2.0;
+      trafficCars[0].z = 56.0;
+      trafficCars[0].angle = Math.PI; // heading North
       trafficCars[0].speed = 24;
     }
     if (trafficCars[1]) {
-      // Red muscle car oncoming in eastbound lane
+      // Red muscle car oncoming in southbound lane with headlights on
       trafficCars[1].active = true;
-      trafficCars[1].x = 672;
-      trafficCars[1].z = 96.5;
-      trafficCars[1].angle = Math.PI / 2;
+      trafficCars[1].x = -3.2;
+      trafficCars[1].z = 64.0;
+      trafficCars[1].angle = 0; // heading South (+Z)
       trafficCars[1].speed = 26;
     }
     if (trafficCars[2]) {
-      // Delivery truck in westbound lane
+      // Delivery truck crossing on the intersecting boulevard
       trafficCars[2].active = true;
-      trafficCars[2].x = 654;
-      trafficCars[2].z = 91.5;
+      trafficCars[2].x = 22.0;
+      trafficCars[2].z = 94.0;
       trafficCars[2].angle = -Math.PI / 2;
-      trafficCars[2].speed = 20;
+      trafficCars[2].speed = 18;
     }
     if (trafficCars[3]) {
-      // Oncoming sedan in eastbound lane
+      // Oncoming hatchback in southbound lane further down
       trafficCars[3].active = true;
-      trafficCars[3].x = 635;
-      trafficCars[3].z = 96.5;
-      trafficCars[3].angle = Math.PI / 2;
-      trafficCars[3].speed = 25;
+      trafficCars[3].x = -3.2;
+      trafficCars[3].z = 38.0;
+      trafficCars[3].angle = 0; // heading South (+Z)
+      trafficCars[3].speed = 22;
     }
     if (trafficCars[4]) {
-      // Trailing westbound car down the boulevard
+      // Trailing sedan in northbound lane behind player
       trafficCars[4].active = true;
-      trafficCars[4].x = 612;
-      trafficCars[4].z = 91.5;
-      trafficCars[4].angle = -Math.PI / 2;
-      trafficCars[4].speed = 22;
+      trafficCars[4].x = 2.0;
+      trafficCars[4].z = 104.0;
+      trafficCars[4].angle = Math.PI;
+      trafficCars[4].speed = 25;
     }
 
-    // Camera: 13m behind car, 6.5m up, offset toward sidewalk edge (z=98.5) so canopies frame sides
-    // Player car is prominent, lower-center, clearly reading at a glance
+    // Camera: elevated three-quarter view looking North-North-West across the coastal avenue
+    // Clear of poles and trees, 14m behind player, 5.8m up
+    // Lower-center: player sports car prominent, clear of minimap in bottom-right
+    // Left: open water, moored cargo ship, towering gantry cranes, golden sunset
+    // Right: Port Solano skyline, palms, glowing streetlamps, rooftop neon signs
     player.cameraOverride = {
-      x: 713,
-      y: 6.5,
-      z: 98.5,
-      lookAtX: 640,
-      lookAtY: 1.8,
-      lookAtZ: 92.5,
+      x: 3.5,
+      y: 5.8,
+      z: 96.0,
+      lookAtX: -24.0,
+      lookAtY: 2.8,
+      lookAtZ: 44.0,
     };
 
-    // Sun angled ~35 degrees off street axis (low sun: y=26) to cast long diagonal raking shadows across road
+    // Sun angled to rake diagonal shadows from the harbour sunset across the coastal avenue
     if (renderer && renderer.sunLight) {
-      renderer.sunLight.position.set(700 + 65, 26, 94 + 50);
-      renderer.sunLight.target.position.set(670, 0, 94);
-      renderer.sunLight.target.updateMatrixWorld();
+      renderer.lockSun = true;
+      renderer.sunLight.target.position.set(0, 0, 65);
+      renderer.sunLight.target.updateMatrixWorld(true);
+      renderer.sunLight.position.set(-45, 38, 120);
       renderer.sunLight.shadow.camera.left = -45;
       renderer.sunLight.shadow.camera.right = 45;
       renderer.sunLight.shadow.camera.top = 45;
       renderer.sunLight.shadow.camera.bottom = -45;
       renderer.sunLight.shadow.camera.near = 10;
-      renderer.sunLight.shadow.camera.far = 180;
+      renderer.sunLight.shadow.camera.far = 200;
       renderer.sunLight.shadow.camera.updateProjectionMatrix();
     }
 
@@ -157,11 +161,12 @@ export function stageScreenshotScene(name, game) {
       lookAtZ: 85.5,
     };
 
-    // Sun angled to cast diagonal palm and building shadows across the sidewalk and street
+    // Sun angled to cast diagonal palm and pedestrian shadows across the sidewalk from the street
     if (renderer && renderer.sunLight) {
-      renderer.sunLight.position.set(680 + 55, 28, 85 + 45);
+      renderer.lockSun = true;
       renderer.sunLight.target.position.set(670, 0, 85);
-      renderer.sunLight.target.updateMatrixWorld();
+      renderer.sunLight.target.updateMatrixWorld(true);
+      renderer.sunLight.position.set(650, 36, 125);
       renderer.sunLight.shadow.camera.left = -35;
       renderer.sunLight.shadow.camera.right = 35;
       renderer.sunLight.shadow.camera.top = 35;

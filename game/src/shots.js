@@ -1,7 +1,8 @@
 // Screenshot scene staging for automated judge capture and deterministic shots.
 // Staged scenes: cover, onfoot, chase, mission (in-game complete banner over 3D city).
 import { enterVehicle } from './player.js';
-import { createVehicle, buildVehicleMesh } from './vehicles.js';
+import { createVehicle, buildVehicleMesh, syncVehicleMesh } from './vehicles.js';
+import { buildNeonSign } from './render3d.js';
 
 export function stageScreenshotScene(name, game) {
   const { player, vehicles, pedestrians, city, wantedSystem, missionSystem, economy, uiManager, renderer } = game;
@@ -9,7 +10,7 @@ export function stageScreenshotScene(name, game) {
   if (name === 'cover' || name === 'start' || name === '1-cover') {
     // 1-cover.jpg: Old Harbor waterfront boulevard overlooking the harbor bay (x=0, z=94)
     // Open water, moored cargo ship with colorful container stacks, and orange gantry cranes in frame.
-    // Player sports car prominent in foreground (lower-center), with 5 live AI traffic cars across lanes.
+    // Player sports car prominent in foreground (lower-center), with 5+ live AI traffic cars across lanes.
     // Golden-hour sun raking long diagonal palm and building shadows across asphalt and sidewalks.
     uiManager.showScreen('hud');
 
@@ -21,48 +22,130 @@ export function stageScreenshotScene(name, game) {
     sportsCar.speed = 28;
     enterVehicle(player, sportsCar);
 
-    // Arrange 5 traffic cars across visible lanes with headlights & taillights on
+    // Arrange at least 5 visible traffic cars in both directions + parked car
     const trafficCars = vehicles.filter((v) => v !== sportsCar && !v.isPolice);
 
     if (trafficCars[0]) {
-      // Yellow taxi ahead in northbound lane toward Marina
+      // Northbound ahead in east lane (taillights facing camera)
       trafficCars[0].active = true;
-      trafficCars[0].x = 2.0;
-      trafficCars[0].z = 56.0;
-      trafficCars[0].angle = Math.PI; // heading North
+      trafficCars[0].x = 2.2;
+      trafficCars[0].z = 62.0;
+      trafficCars[0].angle = Math.PI;
       trafficCars[0].speed = 24;
     }
     if (trafficCars[1]) {
-      // Red muscle car oncoming in southbound lane with headlights on
+      // Southbound oncoming in west lane (headlights shining toward camera)
       trafficCars[1].active = true;
-      trafficCars[1].x = -3.2;
-      trafficCars[1].z = 64.0;
-      trafficCars[1].angle = 0; // heading South (+Z)
+      trafficCars[1].x = -2.8;
+      trafficCars[1].z = 68.0;
+      trafficCars[1].angle = 0;
       trafficCars[1].speed = 26;
     }
     if (trafficCars[2]) {
-      // Delivery truck crossing on the intersecting boulevard
+      // Southbound oncoming in west lane (headlights shining toward camera)
       trafficCars[2].active = true;
-      trafficCars[2].x = 22.0;
-      trafficCars[2].z = 94.0;
-      trafficCars[2].angle = -Math.PI / 2;
-      trafficCars[2].speed = 18;
+      trafficCars[2].x = -2.8;
+      trafficCars[2].z = 52.0;
+      trafficCars[2].angle = 0;
+      trafficCars[2].speed = 25;
     }
     if (trafficCars[3]) {
-      // Oncoming hatchback in southbound lane further down
+      // Northbound ahead in east lane
       trafficCars[3].active = true;
-      trafficCars[3].x = -3.2;
-      trafficCars[3].z = 38.0;
-      trafficCars[3].angle = 0; // heading South (+Z)
-      trafficCars[3].speed = 22;
+      trafficCars[3].x = 2.2;
+      trafficCars[3].z = 44.0;
+      trafficCars[3].angle = Math.PI;
+      trafficCars[3].speed = 28;
     }
     if (trafficCars[4]) {
-      // Trailing sedan in northbound lane behind player
+      // Southbound oncoming in west lane (headlights shining toward camera)
       trafficCars[4].active = true;
-      trafficCars[4].x = 2.0;
-      trafficCars[4].z = 104.0;
-      trafficCars[4].angle = Math.PI;
-      trafficCars[4].speed = 25;
+      trafficCars[4].x = -2.8;
+      trafficCars[4].z = 36.0;
+      trafficCars[4].angle = 0;
+      trafficCars[4].speed = 22;
+    }
+    if (trafficCars[5]) {
+      // Northbound ahead in east lane further down
+      trafficCars[5].active = true;
+      trafficCars[5].x = 2.2;
+      trafficCars[5].z = 28.0;
+      trafficCars[5].angle = Math.PI;
+      trafficCars[5].speed = 25;
+    }
+    if (trafficCars[6]) {
+      // Parked car along east curb
+      trafficCars[6].active = true;
+      trafficCars[6].isParked = true;
+      trafficCars[6].x = 5.4;
+      trafficCars[6].z = 74.0;
+      trafficCars[6].angle = Math.PI;
+      trafficCars[6].speed = 0;
+    }
+
+    // Sync meshes for all staged traffic cars
+    for (let i = 0; i < 7 && i < trafficCars.length; i++) {
+      const tc = trafficCars[i];
+      if (tc && tc.mesh) {
+        tc.mesh.position.set(tc.x, 0, tc.z);
+        tc.mesh.rotation.y = tc.angle;
+        tc.mesh.visible = true;
+      }
+    }
+
+    // Stage 6 pedestrians walking on the harbour promenade
+    if (pedestrians && pedestrians.length > 0) {
+      const pedPositions = [
+        { x: -5.8, z: 76.0, angle: Math.PI },
+        { x: -6.4, z: 70.0, angle: 0 },
+        { x: -5.6, z: 62.0, angle: Math.PI },
+        { x: -6.2, z: 54.0, angle: 0 },
+        { x: -5.7, z: 46.0, angle: Math.PI },
+        { x: -6.3, z: 38.0, angle: 0 },
+      ];
+      for (let i = 0; i < pedPositions.length && i < pedestrians.length; i++) {
+        const ped = pedestrians[i];
+        ped.x = pedPositions[i].x;
+        ped.z = pedPositions[i].z;
+        ped.facingAngle = pedPositions[i].angle;
+        ped.isMoving = true;
+        ped.walkCycle = i * 1.5;
+        if (ped.mesh) {
+          ped.mesh.position.set(ped.x, 0, ped.z);
+          ped.mesh.rotation.y = ped.facingAngle;
+          ped.mesh.visible = true;
+        }
+      }
+    }
+
+    // Stage Cover frame neon signage
+    if (renderer && renderer.scene) {
+      // 1. "NEON HARBOR" glowing facade sign positioned clear of palms and pole
+      const signCover1 = buildNeonSign({
+        text: 'NEON HARBOR',
+        primaryColor: '#00f5ff',
+        accentColor: '#ff007f',
+        width: 8.0,
+        height: 2.5,
+        x: 5.8,
+        y: 10.2,
+        z: 60.0,
+        rotY: -0.32,
+      });
+
+      // 2. "BAR • LIVE MUSIC" upper facade neon sign
+      const signCover2 = buildNeonSign({
+        text: 'BAR • LIVE MUSIC',
+        primaryColor: '#ff007f',
+        accentColor: '#facc15',
+        width: 8.2,
+        height: 2.5,
+        x: 6.5,
+        y: 14.5,
+        z: 56.0,
+        rotY: -0.32,
+      });
+      renderer.scene.add(signCover1, signCover2);
     }
 
     // Camera: elevated three-quarter view looking North-North-West across the coastal avenue
@@ -128,6 +211,37 @@ export function stageScreenshotScene(name, game) {
           ped.mesh.visible = true;
         }
       }
+    }
+
+    // Stage Onfoot frame neon signs on Marina Strip facades
+    if (renderer && renderer.scene) {
+      // 1. "HOTEL SOL" on south facade at street level above sidewalk pedestrians
+      const signHotel = buildNeonSign({
+        text: 'HOTEL SOL',
+        primaryColor: '#ff7700',
+        accentColor: '#facc15',
+        width: 8.0,
+        height: 2.5,
+        x: 676.0,
+        y: 5.6,
+        z: 84.3,
+        rotY: 0,
+      });
+      renderer.scene.add(signHotel);
+
+      // 2. "CLUB AZUL" on south facade in midground
+      const signClub = buildNeonSign({
+        text: 'CLUB AZUL',
+        primaryColor: '#00f5ff',
+        accentColor: '#c026d3',
+        width: 8.0,
+        height: 2.5,
+        x: 668.0,
+        y: 5.6,
+        z: 84.3,
+        rotY: 0,
+      });
+      renderer.scene.add(signClub);
     }
 
     // Parked sports car placed 20m down the curb in midground (not in immediate camera foreground)

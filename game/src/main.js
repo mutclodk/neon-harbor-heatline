@@ -38,7 +38,6 @@ const uiContainer = document.getElementById('ui');
 // Core Subsystems
 const renderer = createRenderer(canvas);
 renderer.buildCityMeshes(city);
-window.__game = { renderer, city };
 
 const audio = createAudioSystem();
 const input = createInput(canvas);
@@ -88,6 +87,19 @@ const missionSystem = createMissionSystem();
 const economy = createEconomySystem();
 const minimap = createMinimap(minimapCanvas);
 const hud = createHud(hudContainer);
+
+window.__game = {
+  renderer,
+  city,
+  player,
+  vehicles,
+  missionSystem,
+  economy,
+  wantedSystem,
+  input,
+  audio,
+  hud,
+};
 
 // UI Manager
 let isPaused = false;
@@ -144,6 +156,7 @@ const uiManager = createUiManager(uiContainer, (action) => {
     uiManager.showScreen('hud');
   }
 });
+window.__game.uiManager = uiManager;
 
 // Police vehicle meshes dynamic sync
 function syncPoliceUnits() {
@@ -315,6 +328,7 @@ function tick() {
     hud.render(player, wantedSystem, missionSystem, economy, currentDistrict);
   }
 }
+window.__game.tick = tick;
 
 // Render & animation loop with fixed timestep accumulator
 let accumulator = 0;

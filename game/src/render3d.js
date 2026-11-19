@@ -29,28 +29,109 @@ function makeSeededRng(seed) {
   };
 }
 
-function getNeonSignTexture(text, color) {
+const neonTexCache = new Map();
+
+export function getNeonSignTexture(text, primaryColor, accentColor = '#ffffff') {
+  const key = `${text}_${primaryColor}_${accentColor}`;
+  if (neonTexCache.has(key)) return neonTexCache.get(key);
+
   const c = document.createElement('canvas');
   c.width = 512;
   c.height = 128;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#0f172a';
+
+  // Dark industrial backing board
+  ctx.fillStyle = '#080c14';
   ctx.fillRect(0, 0, 512, 128);
-  ctx.strokeStyle = color;
+
+  // Outer neon tube border
+  ctx.strokeStyle = primaryColor;
   ctx.lineWidth = 6;
   ctx.strokeRect(8, 8, 496, 112);
 
-  ctx.font = 'bold 54px sans-serif';
+  // Inner neon accent border
+  ctx.strokeStyle = accentColor;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(14, 14, 484, 100);
+
+  // Measure text and fit comfortably inside inner box (max width ~440px)
+  let fontSize = 52;
+  ctx.font = `900 ${fontSize}px "Trebuchet MS", "Impact", "Arial Black", sans-serif`;
+  while (fontSize > 24 && ctx.measureText(text).width > 440) {
+    fontSize -= 2;
+    ctx.font = `900 ${fontSize}px "Trebuchet MS", "Impact", "Arial Black", sans-serif`;
+  }
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffffff';
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 18;
+
+  // Wide neon outer bloom
+  ctx.shadowColor = primaryColor;
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = primaryColor;
   ctx.fillText(text, 256, 64);
   ctx.fillText(text, 256, 64);
 
+  // Crisp neon tube outline
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = primaryColor;
+  ctx.lineWidth = 3;
+  ctx.strokeText(text, 256, 64);
+
+  // Super-bright white neon core
+  ctx.shadowColor = '#ffffff';
+  ctx.shadowBlur = 4;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, 256, 64);
+
   const tex = new THREE.CanvasTexture(c);
+  neonTexCache.set(key, tex);
   return tex;
+}
+
+export function buildNeonSign({
+  text,
+  primaryColor = '#00f5ff',
+  accentColor = '#ff007f',
+  width = 14,
+  height = 4,
+  x = 0,
+  y = 8,
+  z = 0,
+  rotY = 0,
+}) {
+  const group = new THREE.Group();
+  const tex = getNeonSignTexture(text, primaryColor, accentColor);
+
+  // 1. Dark casing box behind sign
+  const boxGeom = new THREE.BoxGeometry(width, height, 0.3);
+  const boxMat = new THREE.MeshLambertMaterial({ color: 0x0f172a });
+  const boxMesh = new THREE.Mesh(boxGeom, boxMat);
+  boxMesh.position.z = -0.16;
+  group.add(boxMesh);
+
+  // 2. Self-luminous sign face
+  const faceGeom = new THREE.PlaneGeometry(width, height);
+  const faceMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+  const faceMesh = new THREE.Mesh(faceGeom, faceMat);
+  group.add(faceMesh);
+
+  // 3. Soft additive bloom plane behind the sign
+  const glowGeom = new THREE.PlaneGeometry(width * 1.35, height * 2.2);
+  const glowMat = new THREE.MeshBasicMaterial({
+    map: getGlowTexture(),
+    color: new THREE.Color(primaryColor),
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    opacity: 0.85,
+  });
+  const glowMesh = new THREE.Mesh(glowGeom, glowMat);
+  glowMesh.position.z = -0.2;
+  group.add(glowMesh);
+
+  group.position.set(x, y, z);
+  group.rotation.y = rotY;
+  return group;
 }
 
 function getWaterTexture() {
@@ -61,53 +142,101 @@ function getWaterTexture() {
   const ctx = c.getContext('2d');
   const rng = makeSeededRng(9943);
 
-  // 1. Deep ocean & coastal harbor depth gradient
-  const grad = ctx.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0.0, '#06283d'); // deep sea navy
-  grad.addColorStop(0.35, '#0e7490'); // port Solano luminous teal
-  grad.addColorStop(0.7, '#0284c7'); // surface tropical aqua
-  grad.addColorStop(1.0, '#083344'); // dark wave trough
+  // 1. Enriched Nautical Depth Gradient
+  // Local X=512 maps toward quay bulkhead (East); X=0 maps toward open horizon (West)
+  const grad = ctx.createLinearGradient(512, 0, 0, 0);
+  grad.addColorStop(0.00, '#021622'); // deep harbor navy-teal right at the quay bulkhead
+  grad.addColorStop(0.20, '#042738'); // deep maritime blue-green
+  grad.addColorStop(0.45, '#074861'); // rich nautical teal
+  grad.addColorStop(0.70, '#0284c7'); // port Solano vibrant tropical aqua
+  grad.addColorStop(1.00, '#0ea5e9'); // luminous horizon turquoise
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 512, 512);
 
-  // 2. Multi-frequency wave swells and ripples
+  // 2. High-contrast multi-frequency wave swells and ripples
   for (let y = 4; y < 512; y += 12) {
-    ctx.strokeStyle = (y % 24 === 0) ? 'rgba(56, 189, 248, 0.65)' : 'rgba(125, 211, 252, 0.35)';
-    ctx.lineWidth = (y % 24 === 0) ? 2.0 : 1.2;
+    // Dark wave trough shadow directly beneath each crest
+    ctx.strokeStyle = 'rgba(1, 14, 24, 0.88)';
+    ctx.lineWidth = 2.8;
     ctx.beginPath();
     for (let x = 0; x <= 512; x += 16) {
-      const cy = y + Math.sin(x * 0.05 + y * 0.04) * 3.5 + Math.cos(x * 0.11 - y * 0.06) * 1.5;
+      const cy = y + 2.0 + Math.sin(x * 0.05 + y * 0.04) * 3.6 + Math.cos(x * 0.11 - y * 0.06) * 1.6;
+      if (x === 0) ctx.moveTo(x, cy);
+      else ctx.lineTo(x, cy);
+    }
+    ctx.stroke();
+
+    // Bright wave crest highlight
+    const isMajor = (y % 24 === 0);
+    ctx.strokeStyle = isMajor ? 'rgba(240, 249, 255, 0.95)' : 'rgba(186, 230, 253, 0.75)';
+    ctx.lineWidth = isMajor ? 2.4 : 1.5;
+    ctx.beginPath();
+    for (let x = 0; x <= 512; x += 16) {
+      const cy = y + Math.sin(x * 0.05 + y * 0.04) * 3.6 + Math.cos(x * 0.11 - y * 0.06) * 1.6;
       if (x === 0) ctx.moveTo(x, cy);
       else ctx.lineTo(x, cy);
     }
     ctx.stroke();
   }
 
-  // 3. Golden sun specular sheen band across the bay
+  // Secondary diagonal wave chop for authentic ocean surface texture
+  ctx.strokeStyle = 'rgba(224, 242, 254, 0.38)';
+  ctx.lineWidth = 1.2;
+  for (let d = -200; d < 712; d += 20) {
+    ctx.beginPath();
+    for (let x = 0; x <= 512; x += 20) {
+      const y = d + x * 0.4 + Math.sin(x * 0.09) * 2.2;
+      if (y >= 0 && y <= 512) {
+        if (x === 0 || y === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+  }
+
+  // 3. Golden sunset specular sheen band across the bay
   const sunBand = ctx.createLinearGradient(0, 0, 512, 0);
-  sunBand.addColorStop(0.0, 'rgba(254, 240, 138, 0.0)');
-  sunBand.addColorStop(0.2, 'rgba(249, 115, 22, 0.18)');
-  sunBand.addColorStop(0.5, 'rgba(254, 240, 138, 0.45)');
-  sunBand.addColorStop(0.8, 'rgba(249, 115, 22, 0.18)');
-  sunBand.addColorStop(1.0, 'rgba(254, 240, 138, 0.0)');
+  sunBand.addColorStop(0.00, 'rgba(254, 240, 138, 0.0)');
+  sunBand.addColorStop(0.18, 'rgba(249, 115, 22, 0.25)');
+  sunBand.addColorStop(0.46, 'rgba(254, 240, 138, 0.65)');
+  sunBand.addColorStop(0.50, 'rgba(255, 255, 255, 0.85)');
+  sunBand.addColorStop(0.54, 'rgba(254, 240, 138, 0.65)');
+  sunBand.addColorStop(0.82, 'rgba(249, 115, 22, 0.25)');
+  sunBand.addColorStop(1.00, 'rgba(254, 240, 138, 0.0)');
   ctx.fillStyle = sunBand;
   ctx.fillRect(0, 0, 512, 512);
 
-  // 4. Subtle foam specks and micro-turbulence
-  for (let i = 0; i < 450; i++) {
-    const fx = rng() * 512;
+  // 4. Seeded specular sparkle glints (small bright specks, denser near the sun side)
+  for (let i = 0; i < 1100; i++) {
+    const rawX = rng();
+    const fx = (rng() > 0.35) ? (140 + rawX * 232) : (rawX * 512);
     const fy = rng() * 512;
-    const fr = 0.7 + rng() * 1.8;
-    ctx.fillStyle = 'rgba(224, 242, 254, 0.22)';
+
+    const distFromSun = Math.abs(fx - 256) / 256;
+    const alpha = (1.0 - distFromSun * 0.6) * (0.65 + rng() * 0.35);
+    const size = 0.9 + rng() * 1.8;
+
+    // Golden halo
+    ctx.fillStyle = `rgba(254, 240, 138, ${alpha * 0.7})`;
     ctx.beginPath();
-    ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+    ctx.arc(fx, fy, size * 2.0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Crisp white core diamond star
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.beginPath();
+    ctx.moveTo(fx, fy - size);
+    ctx.lineTo(fx + size, fy);
+    ctx.lineTo(fx, fy + size);
+    ctx.lineTo(fx - size, fy);
+    ctx.closePath();
     ctx.fill();
   }
 
   sharedWaterTex = new THREE.CanvasTexture(c);
   sharedWaterTex.wrapS = THREE.RepeatWrapping;
   sharedWaterTex.wrapT = THREE.RepeatWrapping;
-  sharedWaterTex.repeat.set(40, 40);
+  sharedWaterTex.repeat.set(60, 60);
   return sharedWaterTex;
 }
 
@@ -431,7 +560,10 @@ function getWindowTextures() {
     const rng = makeSeededRng(
       type === 'harbor' ? 10101 :
       type === 'marina' ? 20202 :
-      type === 'centro' ? 30303 :
+      type === 'centro_glass_blue' ? 30303 :
+      type === 'centro_warm_sand' ? 31313 :
+      type === 'centro_grey' ? 32323 :
+      type === 'centro_pastel' ? 33333 :
       type === 'alto' ? 40404 : 50505
     );
 
@@ -439,42 +571,129 @@ function getWindowTextures() {
     let rows = 14;
 
     if (type === 'harbor') {
-      // Old Harbor: Weathered port brick & concrete masonry with industrial multi-pane windows
-      cols = 6;
-      rows = 12;
-      ctx.fillStyle = '#442e26';
+      // Old Harbor: Rich dark weathered port brick & masonry with dense window grid
+      cols = 20;
+      rows = 32;
+      ctx.fillStyle = '#2c1912'; // deep dark weathered port brick (NOT bare cream)
       ctx.fillRect(0, 0, 512, 512);
 
       // Horizontal brick courses with staggered mortar joints
-      const courseH = 16;
+      const courseH = 8;
       for (let y = 0; y < 512; y += courseH) {
-        ctx.strokeStyle = '#261813';
-        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = '#180e0a';
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(512, y);
         ctx.stroke();
 
-        const offset = (Math.floor(y / courseH) % 2) * 16;
-        for (let x = offset; x < 512; x += 32) {
+        const offset = (Math.floor(y / courseH) % 2) * 12;
+        for (let x = offset; x < 512; x += 24) {
           ctx.beginPath();
           ctx.moveTo(x, y);
           ctx.lineTo(x, y + courseH);
           ctx.stroke();
 
-          // Subtle brick hue variation
-          const bTint = (rng() - 0.5) * 24;
-          ctx.fillStyle = bTint >= 0 ? `rgba(217, 107, 39, ${bTint / 250})` : `rgba(20, 10, 8, ${-bTint / 250})`;
-          ctx.fillRect(x + 1, y + 1, 30, courseH - 2);
+          const bTint = (rng() - 0.5) * 18;
+          ctx.fillStyle = bTint >= 0 ? `rgba(160, 75, 25, ${bTint / 250})` : `rgba(10, 5, 4, ${-bTint / 250})`;
+          ctx.fillRect(x + 1, y + 1, 22, courseH - 2);
         }
       }
 
-      // Soot and industrial grime specks
-      for (let i = 0; i < 4000; i++) {
+      // Structural floor spandrels
+      for (let y = 0; y < 512; y += 512 / rows) {
+        ctx.fillStyle = '#1c100a';
+        ctx.fillRect(0, y, 512, 3.5);
+      }
+
+      // Vertical masonry pilaster piers
+      for (let x = 0; x < 512; x += 512 / cols) {
+        ctx.fillStyle = '#22140d';
+        ctx.fillRect(x, 0, 2.0, 512);
+      }
+
+      // Industrial soot & grime weathering
+      for (let i = 0; i < 5000; i++) {
         const x = Math.floor(rng() * 512);
         const y = Math.floor(rng() * 512);
-        ctx.fillStyle = rng() > 0.5 ? '#1f130e' : '#573d32';
+        ctx.fillStyle = rng() > 0.5 ? '#120805' : '#3d251a';
         ctx.fillRect(x, y, 1, 1);
+      }
+    } else if (type === 'centro_glass_blue') {
+      // Centro High-Rise: Dense modern sapphire glass curtain wall
+      cols = 16;
+      rows = 28;
+      ctx.fillStyle = '#0f172a'; // deep titanium navy
+      ctx.fillRect(0, 0, 512, 512);
+
+      for (let y = 0; y < 512; y += 512 / rows) {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, y, 512, 3.5);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(0, y + 1, 512, 0.8);
+      }
+      for (let x = 0; x < 512; x += 512 / cols) {
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(x, 0, 2.2, 512);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(x + 1, 0, 0.8, 512);
+      }
+    } else if (type === 'centro_warm_sand') {
+      // Centro High-Rise: Dense warm sand & bronze architectural tower
+      cols = 16;
+      rows = 28;
+      ctx.fillStyle = '#2a1d15'; // warm dark sand/bronze
+      ctx.fillRect(0, 0, 512, 512);
+
+      for (let y = 0; y < 512; y += 512 / rows) {
+        ctx.fillStyle = '#3d2b1f';
+        ctx.fillRect(0, y, 512, 3.5);
+        ctx.fillStyle = '#d4a373';
+        ctx.fillRect(0, y + 1, 512, 0.8);
+      }
+      for (let x = 0; x < 512; x += 512 / cols) {
+        ctx.fillStyle = '#543b2a';
+        ctx.fillRect(x, 0, 2.2, 512);
+        ctx.fillStyle = '#fae1dd';
+        ctx.fillRect(x + 1, 0, 0.8, 512);
+      }
+    } else if (type === 'centro_grey') {
+      // Centro High-Rise: Dense graphite & polished steel
+      cols = 16;
+      rows = 28;
+      ctx.fillStyle = '#18181b'; // dark charcoal
+      ctx.fillRect(0, 0, 512, 512);
+
+      for (let y = 0; y < 512; y += 512 / rows) {
+        ctx.fillStyle = '#27272a';
+        ctx.fillRect(0, y, 512, 3.5);
+        ctx.fillStyle = '#a1a1aa';
+        ctx.fillRect(0, y + 1, 512, 0.8);
+      }
+      for (let x = 0; x < 512; x += 512 / cols) {
+        ctx.fillStyle = '#3f3f46';
+        ctx.fillRect(x, 0, 2.2, 512);
+        ctx.fillStyle = '#e4e4e7';
+        ctx.fillRect(x + 1, 0, 0.8, 512);
+      }
+    } else if (type === 'centro_pastel') {
+      // Centro High-Rise: Dense Art Deco pastel mauve tower
+      cols = 16;
+      rows = 28;
+      ctx.fillStyle = '#2b1924'; // deep Art Deco rose-mauve
+      ctx.fillRect(0, 0, 512, 512);
+
+      for (let y = 0; y < 512; y += 512 / rows) {
+        ctx.fillStyle = '#442337';
+        ctx.fillRect(0, y, 512, 3.5);
+        ctx.fillStyle = '#fb7185';
+        ctx.fillRect(0, y + 1, 512, 0.8);
+      }
+      for (let x = 0; x < 512; x += 512 / cols) {
+        ctx.fillStyle = '#5c314b';
+        ctx.fillRect(x, 0, 2.2, 512);
+        ctx.fillStyle = '#fda4af';
+        ctx.fillRect(x + 1, 0, 0.8, 512);
       }
     } else if (type === 'marina') {
       // Marina Strip: Art Deco warm pastel rose stucco with elegant decorative relief bands
@@ -497,28 +716,6 @@ function getWindowTextures() {
         ctx.fillRect(0, b, 512, 4);
         ctx.fillStyle = '#fb7185'; // deco rose pinstripe
         ctx.fillRect(0, b + 5, 512, 2);
-      }
-    } else if (type === 'centro') {
-      // Centro: Modern high-rise glass curtain wall & titanium mullions
-      cols = 8;
-      rows = 16;
-      ctx.fillStyle = '#0f172a'; // deep titanium slate
-      ctx.fillRect(0, 0, 512, 512);
-
-      // Structural metallic floor spandrel bands
-      for (let y = 0; y < 512; y += 32) {
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(0, y, 512, 6);
-        ctx.fillStyle = '#64748b';
-        ctx.fillRect(0, y + 1, 512, 1);
-      }
-
-      // Vertical metallic mullions
-      for (let x = 0; x < 512; x += 32) {
-        ctx.fillStyle = '#475569';
-        ctx.fillRect(x, 0, 3, 512);
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillRect(x + 1, 0, 1, 512);
       }
     } else if (type === 'alto') {
       // Barrio Alto: Sun-drenched terracotta masonry & adobe stucco
@@ -565,7 +762,6 @@ function getWindowTextures() {
         ctx.lineTo(512, y);
         ctx.stroke();
 
-        // Tie-bolt anchor points
         for (let x = 24; x < 512; x += 48) {
           ctx.fillStyle = '#0f1115';
           ctx.beginPath();
@@ -574,7 +770,6 @@ function getWindowTextures() {
         }
       }
 
-      // Grime weathering
       for (let i = 0; i < 4000; i++) {
         const x = Math.floor(rng() * 512);
         const y = Math.floor(rng() * 512);
@@ -584,8 +779,8 @@ function getWindowTextures() {
     }
 
     // Window Grid placement
-    const padX = 10;
-    const padY = 8;
+    const padX = (type === 'harbor') ? 6 : (type.startsWith('centro') ? 4 : 10);
+    const padY = (type === 'harbor') ? 5 : (type.startsWith('centro') ? 3 : 8);
     const w = (512 - padX * (cols + 1)) / cols;
     const h = (512 - padY * (rows + 1)) / rows;
 
@@ -594,31 +789,49 @@ function getWindowTextures() {
         const x = padX + cl * (w + padX);
         const y = padY + r * (h + padY);
 
-        // Window frame surround / sill
         if (type === 'harbor') {
-          // Concrete lintel above & sill below
-          ctx.fillStyle = '#64748b';
-          ctx.fillRect(x - 2, y - 3, w + 4, 3);
-          ctx.fillStyle = '#94a3b8';
-          ctx.fillRect(x - 2, y + h, w + 4, 3);
+          // Weathered lintel above & sill below
+          ctx.fillStyle = '#261711';
+          ctx.fillRect(x - 1, y - 2, w + 2, 2);
+          ctx.fillStyle = '#4a3227';
+          ctx.fillRect(x - 1, y + h, w + 2, 2);
         } else if (type === 'marina') {
-          // Elegant white architrave surround
           ctx.strokeStyle = '#e2e8f0';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1);
         } else if (type === 'alto') {
-          // Timber lintel header
           ctx.fillStyle = '#78350f';
-          ctx.fillRect(x - 1, y - 3, w + 2, 3);
+          ctx.fillRect(x - 1, y - 2, w + 2, 2);
         }
 
-        // Window Glass & Illumination
-        const isLit = (Math.sin(r * 19.3 + cl * 7.7 + (type === 'centro' ? 2 : 0)) > 0.12);
+        // Window Illumination condition
+        let isLit = false;
+        if (type === 'harbor') {
+          isLit = (Math.sin(r * 19.3 + cl * 7.7) > 0.52); // ~24% lit variation
+        } else if (type === 'centro_glass_blue') {
+          isLit = (Math.sin(r * 13.7 + cl * 8.3) > 0.22); // ~40% lit
+        } else if (type === 'centro_warm_sand') {
+          isLit = (Math.sin(r * 11.3 + cl * 9.1 + 1.2) > 0.28); // ~36% lit
+        } else if (type === 'centro_grey') {
+          isLit = (Math.sin(r * 17.1 + cl * 6.9 + 2.4) > 0.18); // ~42% lit
+        } else if (type === 'centro_pastel') {
+          isLit = (Math.sin(r * 15.5 + cl * 11.1 + 3.1) > 0.32); // ~35% lit
+        } else {
+          isLit = (Math.sin(r * 19.3 + cl * 7.7) > 0.12);
+        }
 
         if (isLit) {
           let winColor = '#fbbf24';
-          if (type === 'centro') {
-            winColor = (cl + r) % 3 === 0 ? '#38bdf8' : ((cl + r) % 3 === 1 ? '#f0f9ff' : '#fde047');
+          if (type === 'harbor') {
+            winColor = (cl + r) % 3 === 0 ? '#d97706' : ((cl + r) % 3 === 1 ? '#f59e0b' : '#b45309');
+          } else if (type === 'centro_glass_blue') {
+            winColor = (cl + r) % 3 === 0 ? '#38bdf8' : ((cl + r) % 3 === 1 ? '#f0f9ff' : '#0284c7');
+          } else if (type === 'centro_warm_sand') {
+            winColor = (cl + r) % 3 === 0 ? '#fbbf24' : ((cl + r) % 3 === 1 ? '#fef3c7' : '#f59e0b');
+          } else if (type === 'centro_grey') {
+            winColor = (cl + r) % 3 === 0 ? '#f4f4f5' : ((cl + r) % 3 === 1 ? '#67e8f9' : '#fed7aa');
+          } else if (type === 'centro_pastel') {
+            winColor = (cl + r) % 3 === 0 ? '#fda4af' : ((cl + r) % 3 === 1 ? '#fef08a' : '#5eead4');
           } else if (type === 'marina') {
             winColor = (cl + r) % 2 === 0 ? '#f472b6' : '#fef08a';
           } else if (type === 'flats') {
@@ -627,13 +840,12 @@ function getWindowTextures() {
             winColor = (cl + r) % 2 === 0 ? '#f59e0b' : '#fbbf24';
           }
 
-          // Diffuse lit window
           ctx.fillStyle = winColor;
           ctx.fillRect(x, y, w, h);
 
-          // Subtle window cross mullion
-          ctx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
-          ctx.lineWidth = 1.2;
+          // Subtle window cross divider
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.55)';
+          ctx.lineWidth = 1.0;
           ctx.beginPath();
           ctx.moveTo(x + w / 2, y);
           ctx.lineTo(x + w / 2, y + h);
@@ -645,20 +857,20 @@ function getWindowTextures() {
           ctxEm.fillStyle = winColor;
           ctxEm.fillRect(x, y, w, h);
         } else {
-          // Dark reflective glass with subtle sky reflection
-          if (type === 'centro') {
+          if (type.startsWith('centro')) {
             const glassG = ctx.createLinearGradient(x, y, x, y + h);
-            glassG.addColorStop(0, '#1e3a5f');
-            glassG.addColorStop(1, '#090d16');
+            glassG.addColorStop(0, '#132337');
+            glassG.addColorStop(1, '#070c14');
             ctx.fillStyle = glassG;
+          } else if (type === 'harbor') {
+            ctx.fillStyle = '#0a0e16';
           } else {
             ctx.fillStyle = '#0f172a';
           }
           ctx.fillRect(x, y, w, h);
 
-          // Dark window divider
           ctx.strokeStyle = '#050811';
-          ctx.lineWidth = 1;
+          ctx.lineWidth = 0.8;
           ctx.beginPath();
           ctx.moveTo(x + w / 2, y);
           ctx.lineTo(x + w / 2, y + h);
@@ -678,10 +890,15 @@ function getWindowTextures() {
     return { diffuse, emissive };
   }
 
+  const defaultCentro = makeTex('centro_glass_blue');
   sharedWindowTextures = {
     harbor: makeTex('harbor'),
     marina: makeTex('marina'),
-    centro: makeTex('centro'),
+    centro: defaultCentro,
+    centro_glass_blue: defaultCentro,
+    centro_warm_sand: makeTex('centro_warm_sand'),
+    centro_grey: makeTex('centro_grey'),
+    centro_pastel: makeTex('centro_pastel'),
     alto: makeTex('alto'),
     flats: makeTex('flats'),
   };
@@ -691,6 +908,7 @@ function getWindowTextures() {
 export function createRenderer(canvas) {
   const scene = new THREE.Scene();
   const skyTex = createSkyTexture();
+  const glowTex = getGlowTexture();
   scene.background = skyTex;
   scene.fog = new THREE.FogExp2(0xf97316, 0.001);
 
@@ -704,7 +922,7 @@ export function createRenderer(canvas) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.10;
+  renderer.toneMappingExposure = 1.08;
 
   const camera = new THREE.PerspectiveCamera(
     60,
@@ -713,15 +931,15 @@ export function createRenderer(canvas) {
     950
   );
 
-  // Lighting: High-contrast golden hour illumination with deep, readable shadows
-  const hemiLight = new THREE.HemisphereLight(0xffeedd, 0x3b2d42, 0.22);
+  // Lighting: High fill illumination so shadowed asphalt, markings and facades stay readable
+  const hemiLight = new THREE.HemisphereLight(0xffecd6, 0x54475a, 0.58);
   scene.add(hemiLight);
 
-  const ambientLight = new THREE.AmbientLight(0xfdba74, 0.08);
+  const ambientLight = new THREE.AmbientLight(0xfcb77d, 0.26);
   scene.add(ambientLight);
 
-  // Directional Sun with high shadow contrast
-  const sunLight = new THREE.DirectionalLight(0xfff1db, 3.6);
+  // Directional Sun with balanced shadow contrast
+  const sunLight = new THREE.DirectionalLight(0xfff1db, 2.7);
   sunLight.position.set(220, 85, 240);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.width = 2048;
@@ -816,12 +1034,21 @@ export function createRenderer(canvas) {
   pier.castShadow = true;
   scene.add(pier);
 
-  // Sleek white motor yacht moored at the marina slip
+  // Sleek white motor yacht moored at the marina slip (with full marine details)
   const yachtGroup = new THREE.Group();
   const yachtHullMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
   const yachtHull = new THREE.Mesh(new THREE.BoxGeometry(4.2, 2.2, 14), yachtHullMat);
   yachtHull.position.y = 0.6;
   yachtHull.castShadow = true;
+
+  // Tapered bow wedge
+  const bowGeom = new THREE.ConeGeometry(2.1, 4.5, 4);
+  bowGeom.rotateX(Math.PI / 2);
+  bowGeom.rotateY(Math.PI / 4);
+  const bow = new THREE.Mesh(bowGeom, yachtHullMat);
+  bow.position.set(0, 0.6, -9.0);
+  bow.scale.set(1.0, 0.55, 1.0);
+  bow.castShadow = true;
 
   const yachtStripe = new THREE.Mesh(
     new THREE.BoxGeometry(4.3, 0.4, 14.1),
@@ -834,13 +1061,128 @@ export function createRenderer(canvas) {
   yachtCabin.position.set(0, 2.0, -1.0);
   yachtCabin.castShadow = true;
 
+  // Tinted cabin windshield
+  const windshieldMat = new THREE.MeshLambertMaterial({ color: 0x0284c7 });
+  const windshield = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.9, 1.5), windshieldMat);
+  windshield.position.set(0, 2.25, -4.5);
+  windshield.rotation.x = -0.35;
+
   const archMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
   const radarArch = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.4, 0.4), archMat);
   radarArch.position.set(0, 3.2, -3.2);
 
-  yachtGroup.add(yachtHull, yachtStripe, yachtCabin, radarArch);
+  // Marine mast with navigation lights
+  const mastMat = new THREE.MeshLambertMaterial({ color: 0xf1f5f9 });
+  const yachtMast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 3.8, 6), mastMat);
+  yachtMast.position.set(0, 4.2, -1.8);
+
+  const radarDome = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), yachtHullMat);
+  radarDome.position.set(0, 5.8, -1.8);
+
+  const navPort = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTex,
+      color: 0xef4444,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  navPort.scale.set(1.4, 1.4, 1);
+  navPort.position.set(-1.8, 2.4, -4.2);
+
+  const navStbd = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTex,
+      color: 0x22c55e,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  navStbd.scale.set(1.4, 1.4, 1);
+  navStbd.position.set(1.8, 2.4, -4.2);
+
+  // Stainless steel deck railings
+  const railGeomL = new THREE.BoxGeometry(0.06, 0.6, 12);
+  const yachtRailL = new THREE.Mesh(railGeomL, mastMat);
+  yachtRailL.position.set(-2.0, 2.0, -1.5);
+  const yachtRailR = new THREE.Mesh(railGeomL, mastMat);
+  yachtRailR.position.set(2.0, 2.0, -1.5);
+
+  yachtGroup.add(
+    yachtHull, bow, yachtStripe, yachtCabin, windshield,
+    radarArch, yachtMast, radarDome, navPort, navStbd,
+    yachtRailL, yachtRailR
+  );
   yachtGroup.position.set(-20, -0.1, 72);
   scene.add(yachtGroup);
+
+  // Second small boat (runabout/speedboat) moored at slip
+  const boat2Group = new THREE.Group();
+  const b2Hull = new THREE.Mesh(
+    new THREE.BoxGeometry(2.5, 1.1, 7.5),
+    new THREE.MeshLambertMaterial({ color: 0x0284c7 })
+  );
+  b2Hull.position.y = 0.35;
+  b2Hull.castShadow = true;
+
+  const b2BowGeom = new THREE.ConeGeometry(1.25, 2.8, 4);
+  b2BowGeom.rotateX(Math.PI / 2);
+  b2BowGeom.rotateY(Math.PI / 4);
+  const b2Bow = new THREE.Mesh(b2BowGeom, new THREE.MeshLambertMaterial({ color: 0x0284c7 }));
+  b2Bow.position.set(0, 0.35, -4.8);
+  b2Bow.scale.set(1.0, 0.45, 1.0);
+  b2Bow.castShadow = true;
+
+  const b2Deck = new THREE.Mesh(
+    new THREE.BoxGeometry(2.3, 0.2, 7.2),
+    new THREE.MeshLambertMaterial({ color: 0xf8fafc })
+  );
+  b2Deck.position.y = 0.95;
+
+  const b2Windshield = new THREE.Mesh(
+    new THREE.BoxGeometry(2.1, 0.55, 0.15),
+    new THREE.MeshLambertMaterial({ color: 0x38bdf8 })
+  );
+  b2Windshield.position.set(0, 1.35, -1.5);
+  b2Windshield.rotation.x = -0.4;
+
+  const b2Engine = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 0.9, 0.8),
+    new THREE.MeshLambertMaterial({ color: 0x0f172a })
+  );
+  b2Engine.position.set(0, 0.7, 4.0);
+
+  boat2Group.add(b2Hull, b2Bow, b2Deck, b2Windshield, b2Engine);
+  boat2Group.position.set(-26, -0.1, 52);
+  scene.add(boat2Group);
+
+  // Foreground/midground stacked crates along quayside promenade edge
+  const crateMatWood = new THREE.MeshLambertMaterial({ color: 0x78350f });
+  const crateMatOrange = new THREE.MeshLambertMaterial({ color: 0xea580c });
+  const crateMatTeal = new THREE.MeshLambertMaterial({ color: 0x0891b2 });
+
+  // Crate stack 1 near z=78
+  const c1a = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.3, 1.8), crateMatWood);
+  c1a.position.set(-6.8, 0.65, 78.0);
+  c1a.castShadow = true;
+  const c1b = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.2, 1.5), crateMatOrange);
+  c1b.position.set(-6.8, 1.9, 78.1);
+  c1b.rotation.y = 0.15;
+  c1b.castShadow = true;
+  scene.add(c1a, c1b);
+
+  // Crate stack 2 near z=59
+  const c2a = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.4, 2.0), crateMatTeal);
+  c2a.position.set(-7.0, 0.7, 59.0);
+  c2a.castShadow = true;
+  const c2b = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 1.7), crateMatWood);
+  c2b.position.set(-7.0, 2.0, 59.1);
+  c2b.rotation.y = -0.18;
+  c2b.castShadow = true;
+  const c2c = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.3), crateMatOrange);
+  c2c.position.set(-7.0, 3.1, 59.1);
+  c2c.castShadow = true;
+  scene.add(c2a, c2b, c2c);
 
   // Waypoint Beacon in 3D world
   const beaconGroup = new THREE.Group();
@@ -874,7 +1216,6 @@ export function createRenderer(canvas) {
   scene.add(beaconGroup);
 
   const tokenMeshes = [];
-  const glowTex = getGlowTexture();
   const windowTextures = getWindowTextures();
 
   function buildCityMeshes(city) {
@@ -994,12 +1335,18 @@ export function createRenderer(canvas) {
       const b = buildings[i];
       const bGroup = new THREE.Group();
 
-      const winTex = windowTextures[b.district] || windowTextures.harbor;
+      let winTex;
+      if (b.district === 'centro') {
+        const styles = ['centro_glass_blue', 'centro_warm_sand', 'centro_grey', 'centro_pastel'];
+        winTex = windowTextures[styles[b.id % styles.length]];
+      } else {
+        winTex = windowTextures[b.district] || windowTextures.harbor;
+      }
       const mat = new THREE.MeshLambertMaterial({
         map: winTex.diffuse,
         emissiveMap: winTex.emissive,
         emissive: new THREE.Color(0xffffff),
-        emissiveIntensity: 0.65,
+        emissiveIntensity: b.district === 'harbor' ? 0.35 : 0.60,
       });
 
       const geom = new THREE.BoxGeometry(b.width, b.height, b.depth);
@@ -1052,55 +1399,41 @@ export function createRenderer(canvas) {
         }
       }
 
-      // Prominent rooftop neon signs with glowing text canvas textures
+      // Prominent rooftop & street-level neon signs with glowing text canvas textures
       if (b.hasNeonSign) {
         const signGroup = new THREE.Group();
         const signText = NEON_LABELS[b.id % NEON_LABELS.length];
-        const signTex = getNeonSignTexture(signText, b.neonColor || '#f43f5e');
-        const signMat = new THREE.MeshBasicMaterial({ map: signTex, transparent: true });
 
         const signWidth = Math.min(b.width * 0.85, 26);
-        const signHeight = 5.5;
-        const signGeom = new THREE.PlaneGeometry(signWidth, signHeight);
+        const signHeight = 5.2;
 
-        // North-facing sign
-        const signMeshN = new THREE.Mesh(signGeom, signMat);
-        signMeshN.position.set(b.x, b.height + signHeight / 2 + 1.5, b.z - b.depth * 0.38);
-        signMeshN.rotation.y = Math.PI;
+        // North-facing rooftop sign
+        const signMeshN = buildNeonSign({
+          text: signText,
+          primaryColor: b.neonColor || '#f43f5e',
+          accentColor: '#ffffff',
+          width: signWidth,
+          height: signHeight,
+          x: b.x,
+          y: b.height + signHeight / 2 + 1.5,
+          z: b.z - b.depth * 0.38,
+          rotY: Math.PI,
+        });
 
-        // South-facing sign
-        const signMeshS = new THREE.Mesh(signGeom, signMat);
-        signMeshS.position.set(b.x, b.height + signHeight / 2 + 1.5, b.z + b.depth * 0.38);
+        // South-facing rooftop sign
+        const signMeshS = buildNeonSign({
+          text: signText,
+          primaryColor: b.neonColor || '#f43f5e',
+          accentColor: '#ffffff',
+          width: signWidth,
+          height: signHeight,
+          x: b.x,
+          y: b.height + signHeight / 2 + 1.5,
+          z: b.z + b.depth * 0.38,
+          rotY: 0,
+        });
 
-        // West-facing facade marquee sign on coastal / avenue buildings
-        const signMeshW = new THREE.Mesh(signGeom, signMat);
-        signMeshW.position.set(b.minX - 0.25, Math.min(b.height * 0.65, 16.5), b.z);
-        signMeshW.rotation.y = -Math.PI / 2;
-
-        const signGlowW = new THREE.Sprite(
-          new THREE.SpriteMaterial({
-            map: glowTex,
-            color: new THREE.Color(b.neonColor || '#f43f5e'),
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-          })
-        );
-        signGlowW.scale.set(signWidth * 1.2, signHeight * 2.0, 1);
-        signGlowW.position.set(b.minX - 0.5, Math.min(b.height * 0.65, 16.5), b.z);
-
-        // Neon glow sprite
-        const signGlow = new THREE.Sprite(
-          new THREE.SpriteMaterial({
-            map: glowTex,
-            color: new THREE.Color(b.neonColor || '#f43f5e'),
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-          })
-        );
-        signGlow.scale.set(signWidth * 1.25, signHeight * 2.2, 1);
-        signGlow.position.set(b.x, b.height + signHeight / 2 + 1.5, b.z);
-
-        signGroup.add(signMeshN, signMeshS, signMeshW, signGlowW, signGlow);
+        signGroup.add(signMeshN, signMeshS);
         bGroup.add(signGroup);
       }
 
@@ -1162,6 +1495,30 @@ export function createRenderer(canvas) {
       craneGroup.position.set(cpos.x, 0, cpos.z);
       scene.add(craneGroup);
     }
+
+    // Industrial harbor warehouse & pier terminal with neon sign across open water
+    const whGroup = new THREE.Group();
+    const whMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
+    const whMesh = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 44), whMat);
+    whMesh.position.set(0, 5, 0);
+    whMesh.castShadow = true;
+    whGroup.add(whMesh);
+
+    // Glowing neon sign facing east across the bay
+    const baySign = buildNeonSign({
+      text: 'PORT SOLANO',
+      primaryColor: '#f97316',
+      accentColor: '#00f5ff',
+      width: 18,
+      height: 4.4,
+      x: 10.2,
+      y: 7.2,
+      z: 0,
+      rotY: Math.PI / 2,
+    });
+    whGroup.add(baySign);
+    whGroup.position.set(-68, 0, 48);
+    scene.add(whGroup);
 
     // Cargo ship moored at industrial docks across the open harbor water
     const shipGroup = new THREE.Group();
@@ -1231,6 +1588,20 @@ export function createRenderer(canvas) {
         }
       }
     }
+    // Ship hull glowing neon sign across the open harbor water
+    const shipSign = buildNeonSign({
+      text: 'NEON HARBOR',
+      primaryColor: '#00f5ff',
+      accentColor: '#ff007f',
+      width: 26,
+      height: 5.2,
+      x: 13.3,
+      y: 3.8,
+      z: 16,
+      rotY: Math.PI / 2,
+    });
+    shipGroup.add(shipSign);
+
     shipGroup.position.set(-80, 0.2, 35);
     scene.add(shipGroup);
 

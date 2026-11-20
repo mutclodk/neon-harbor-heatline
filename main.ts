@@ -1,43 +1,39 @@
-// NEON HARBOR: HEATLINE — Official Entry for Bounty gta6-01 "Make GTA 6"
-// A complete, original 3D open-world crime action game set in sun-soaked Port Solano.
-// Built with procedural geometry, custom arcade vehicle physics, traffic AI, pedestrians,
-// a 5-star wanted heat escalation system, 7 story jobs, combat, HUD with real-time minimap radar,
-// procedural WebAudio sound synthesizer, and career results dossier.
-//
-// Standalone runner & grader entrypoint (Node 22, standard library only):
-// Copies static game/ assets and screenshots/ to /output and compiles the canonical dossier.json.
-// Local testing:
-//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+/**
+ * Entrypoint script that packages the NEON HARBOR: HEATLINE browser game from the
+ * game directory into the designated output location and generates dossier.json
+ * for automated grading. To serve and play the game locally, run serve.ts instead.
+ */
 
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
 
-const rootDir = fileURLToPath(new URL('.', import.meta.url));
-const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const rootDir = dirname(fileURLToPath(import.meta.url));
+const outputDir = process.env.MAKEFUN_OUTPUT_DIR || '/output';
 
-// 1. Prepare target directories
 mkdirSync(outputDir, { recursive: true });
-mkdirSync(join(outputDir, 'screenshots'), { recursive: true });
 
-// 2. Transfer game assets and automated screenshot captures
-cpSync(join(rootDir, 'game'), join(outputDir, 'game'), { recursive: true });
-if (existsSync(join(rootDir, 'screenshots'))) {
-  cpSync(join(rootDir, 'screenshots'), join(outputDir, 'screenshots'), { recursive: true });
+const gameSrc = join(rootDir, 'game');
+const gameDst = join(outputDir, 'game');
+cpSync(gameSrc, gameDst, { recursive: true });
+
+const screenshotsSrc = join(rootDir, 'screenshots');
+if (existsSync(screenshotsSrc)) {
+  const screenshotsDst = join(outputDir, 'screenshots');
+  cpSync(screenshotsSrc, screenshotsDst, { recursive: true });
 }
 
-// 3. Generate canonical dossier.json conforming to competition.yaml gate limits:
-//    - Screenshots: exactly 4 JPEGs (each <= 256 KiB)
-//    - Game files: max 993 files/dirs (<= 48 MiB total)
-//    - Dossier text: max 160 KiB (163,840 bytes)
-writeFileSync(
-  join(outputDir, 'dossier.json'),
-  buildDossier(outputDir, {
-    text_max_bytes: 163840,
-    screenshots: { max: 4, max_bytes: 262144 },
-    game_max_files: 993,
-    game_max_bytes: 50331648,
-    game_path_max_bytes: 1000,
-  }),
-);
+const capsOptions = {
+  maxTextBytes: 163840,
+  textSizeCap: 163840,
+  maxScreenshots: 4,
+  maxScreenshotBytes: 262144,
+  maxGameFiles: 993,
+  maxGameBytes: 50331648,
+  maxPathBytes: 1000,
+  maxPathLength: 1000,
+};
+
+const dossierContent = buildDossier(outputDir, capsOptions);
+writeFileSync(join(outputDir, 'dossier.json'), dossierContent, 'utf-8');

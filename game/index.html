@@ -157,3 +157,348 @@
       margin-top: 6px;
       text-shadow: 0 0 12px rgba(255, 42, 126, 0.6);
     }
+    .ui-wanted-cluster {
+      top: 24px;
+      right: 24px;
+      padding: 12px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .ui-wanted-stars {
+      display: flex;
+      gap: 4px;
+    }
+
+    .ui-wanted-star {
+      font-size: 20px;
+      color: rgba(255, 255, 255, 0.2);
+      transition: color 0.2s ease, text-shadow 0.2s ease;
+    }
+
+    .ui-star-active {
+      color: var(--amber);
+      text-shadow: 0 0 10px rgba(255, 183, 3, 0.85);
+    }
+
+    .ui-heat-track {
+      width: 130px;
+      height: 6px;
+      background: var(--track);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .ui-heat-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--orange), var(--pink));
+      border-radius: 3px;
+      transition: width 0.2s ease;
+    }
+
+    .ui-context-panel {
+      bottom: 24px;
+      left: 24px;
+      padding: 12px 18px;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ui-context-name {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+
+    .ui-context-speed {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: var(--text);
+    }
+
+    .ui-context-track {
+      width: 100%;
+      height: 6px;
+      background: var(--track);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .ui-context-fill {
+      height: 100%;
+      width: 100%;
+      border-radius: 3px;
+      transition: width 0.2s ease;
+    }
+
+    .ui-fill-vehicle {
+      background: linear-gradient(90deg, var(--cyan), #0088ff);
+    }
+
+    .ui-fill-stamina {
+      background: linear-gradient(90deg, var(--orange), var(--amber));
+    }
+
+    .ui-minimap-wrap {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 2px solid var(--panel-border);
+      box-shadow: var(--panel-glow);
+      background: var(--panel-bg);
+      overflow: hidden;
+      pointer-events: auto;
+    }
+
+    .ui-minimap-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 50%;
+    }
+
+    .ui-vignette {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px rgba(255, 42, 126, 0.85);
+      opacity: 0;
+      transition: opacity 0.15s ease-out;
+      z-index: 15;
+    }
+
+    .ui-toast-stack {
+      position: absolute;
+      bottom: 220px;
+      left: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .ui-toast {
+      background: rgba(12, 15, 26, 0.9);
+      border: 1px solid var(--cyan);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .ui-screens-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(9, 10, 16, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    .ui-screen {
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-border);
+      box-shadow: 0 0 35px rgba(255, 42, 126, 0.3);
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 580px;
+      width: 90%;
+      text-align: center;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .ui-screen-title {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: 0 0 16px rgba(0, 240, 255, 0.6);
+      margin-bottom: 8px;
+    }
+
+    .ui-screen-subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .ui-btn {
+      display: block;
+      width: 100%;
+      padding: 12px 20px;
+      margin-bottom: 10px;
+      background: transparent;
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+    }
+
+    .ui-btn:hover {
+      background: var(--cyan);
+      color: #090a10;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+      text-shadow: none;
+    }
+
+    .ui-btn-secondary {
+      border-color: var(--pink);
+      color: var(--pink);
+      text-shadow: 0 0 8px rgba(255, 42, 126, 0.3);
+    }
+
+    .ui-btn-secondary:hover {
+      background: var(--pink);
+      color: #090a10;
+      box-shadow: 0 0 20px rgba(255, 42, 126, 0.6);
+    }
+
+    .ui-mission-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      text-align: left;
+    }
+
+    .ui-medal {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .ui-medal-gold {
+      color: #ffd700;
+      border: 1px solid #ffd700;
+      text-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+    }
+
+    .ui-medal-silver {
+      color: #c0c0c0;
+      border: 1px solid #c0c0c0;
+    }
+
+    .ui-medal-bronze {
+      color: #cd7f32;
+      border: 1px solid #cd7f32;
+    }
+
+    .ui-results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .ui-results-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 4px;
+    }
+
+    .ui-grade {
+      font-size: 64px;
+      font-weight: 900;
+      color: var(--pink);
+      text-shadow: 0 0 24px rgba(255, 42, 126, 0.8);
+      margin: 16px 0;
+    }
+
+    #loading-overlay, .ui-loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      pointer-events: auto;
+    }
+
+    .ui-loading-title {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      color: var(--pink);
+      text-shadow: 0 0 20px rgba(255, 42, 126, 0.6);
+      margin-bottom: 12px;
+    }
+
+    .ui-loading-text {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="render-canvas"></canvas>
+  <div id="ui-root"></div>
+  <div id="loading-overlay" class="ui-loading-overlay ui-hidden">
+    <div class="ui-loading-title">NEON HARBOR: HEATLINE</div>
+    <div class="ui-loading-text">LOADING CITY SYSTEM...</div>
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -767,9 +767,17 @@ export function createRenderer(canvas, city, config = {}) {
   return {
     setShotCamera(name, position, lookAt) {
       if (!name) return;
+      const posObj = (position && typeof position === 'object' && 'position' in position) ? position.position : position;
+      const lookObj = (position && typeof position === 'object' && 'lookAt' in position) ? position.lookAt : lookAt;
+      const px = Number(posObj?.x ?? 0);
+      const py = Number(posObj?.y ?? 18);
+      const pz = Number(posObj?.z ?? 0);
+      const lx = Number(lookObj?.x ?? 0);
+      const ly = Number(lookObj?.y ?? 1.5);
+      const lz = Number(lookObj?.z ?? 0);
       shotCameras[name] = {
-        position: new THREE.Vector3(position.x ?? 0, position.y ?? 0, position.z ?? 0),
-        lookAt: new THREE.Vector3(lookAt.x ?? 0, lookAt.y ?? 0, lookAt.z ?? 0)
+        position: new THREE.Vector3(px, py, pz),
+        lookAt: new THREE.Vector3(lx, ly, lz)
       };
     },
 

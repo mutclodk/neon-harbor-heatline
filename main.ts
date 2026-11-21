@@ -25,14 +25,11 @@ if (existsSync(screenshotsSrc)) {
 }
 
 const capsOptions = {
-  maxTextBytes: 163840,
-  textSizeCap: 163840,
-  maxScreenshots: 4,
-  maxScreenshotBytes: 262144,
-  maxGameFiles: 993,
-  maxGameBytes: 50331648,
-  maxPathBytes: 1000,
-  maxPathLength: 1000,
+  text_max_bytes: 163840,
+  screenshots: { max: 4, max_bytes: 262144 },
+  game_max_files: 993,
+  game_max_bytes: 50331648,
+  game_path_max_bytes: 1000,
 };
 
 const dossierContent = buildDossier(outputDir, capsOptions);

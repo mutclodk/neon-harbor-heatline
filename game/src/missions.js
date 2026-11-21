@@ -314,6 +314,10 @@ function calculateMedal(parTimes, elapsedSec) {
 /**
  * Updates mission state and economy logic each fixed step.
  */
+export function stepMissions(world, state) {
+  return updateMissions(world, state, 1 / 60);
+}
+
 export function updateMissions(world, state, dt) {
   if (!world || !state) return;
 

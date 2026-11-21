@@ -140,8 +140,8 @@ const marinaPoint = landmarks.marinaLighthousePoint || landmarks.marina || { x: 
 const centroPlaza = landmarks.centroTowerPlaza || landmarks.centro || { x: 500, z: 500 };
 
 renderer.setShotCamera('cover', {
-  position: { x: harbourCrane.x + 35, y: 18, z: harbourCrane.z - 40 },
-  lookAt: { x: harbourCrane.x, y: 3, z: harbourCrane.z + 10 }
+  position: { x: harbourCrane.x - 75, y: 45, z: harbourCrane.z - 85 },
+  lookAt: { x: harbourCrane.x + 15, y: 5, z: harbourCrane.z + 25 }
 });
 
 renderer.setShotCamera('onfoot', {
@@ -155,8 +155,8 @@ renderer.setShotCamera('chase', {
 });
 
 renderer.setShotCamera('mission', {
-  position: { x: centroPlaza.x + 28, y: 10, z: centroPlaza.z + 28 },
-  lookAt: { x: centroPlaza.x, y: 1.5, z: centroPlaza.z }
+  position: { x: centroPlaza.x + 50, y: 28, z: centroPlaza.z + 50 },
+  lookAt: { x: centroPlaza.x, y: 2, z: centroPlaza.z }
 });
 
 function computeFollowCamera(world) {
@@ -393,7 +393,7 @@ function frame(time) {
     }
   }
 
-  const cameraDesc = isStagingMode && stagingCameraName ? stagingCameraName : computeFollowCamera(world);
+  const cameraDesc = isStagingMode && stagingCameraName ? { mode: 'shot', shotName: stagingCameraName } : computeFollowCamera(world);
   renderer.render(world, cameraDesc, world.tick);
   ui.update(buildViewObject());
 
@@ -420,7 +420,7 @@ window.__game = {
       };
       stepGame(input);
     }
-    const cam = isStagingMode && stagingCameraName ? stagingCameraName : computeFollowCamera(world);
+    const cam = isStagingMode && stagingCameraName ? { mode: 'shot', shotName: stagingCameraName } : computeFollowCamera(world);
     renderer.render(world, cam, world.tick);
     ui.update(buildViewObject());
   },

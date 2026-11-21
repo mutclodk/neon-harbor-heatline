@@ -302,7 +302,7 @@ export function createUI(root, callbacks = {}) {
 
   function rebuildScreen(screenName, payload, state) {
     screensLayer.replaceChildren();
-    if (!screenName || screenName === 'game') {
+    if (!screenName || screenName === 'game' || screenName === 'hud') {
       screensLayer.classList.add('ui-hidden');
       return;
     }

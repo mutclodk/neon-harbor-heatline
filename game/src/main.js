@@ -138,25 +138,26 @@ const landmarks = city.landmarks || {};
 const harbourCrane = landmarks.harbourCraneYard || landmarks.harbour || { x: 200, z: 100 };
 const marinaPoint = landmarks.marinaLighthousePoint || landmarks.marina || { x: 100, z: 500 };
 const centroPlaza = landmarks.centroTowerPlaza || landmarks.centro || { x: 500, z: 500 };
+const harbourPier = (city.harbour && city.harbour.pier) || { x: harbourCrane.x, z: -25 };
 
 renderer.setShotCamera('cover', {
-  position: { x: harbourCrane.x - 75, y: 45, z: harbourCrane.z - 85 },
-  lookAt: { x: harbourCrane.x + 15, y: 5, z: harbourCrane.z + 25 }
+  position: { x: harbourPier.x - 72, y: 30, z: harbourPier.z - 128 },
+  lookAt: { x: harbourPier.x + 20, y: 9, z: harbourPier.z + 58 }
 });
 
 renderer.setShotCamera('onfoot', {
-  position: { x: marinaPoint.x + 12, y: 3.5, z: marinaPoint.z + 14 },
-  lookAt: { x: marinaPoint.x, y: 1.2, z: marinaPoint.z }
+  position: { x: marinaPoint.x + 7, y: 2.4, z: marinaPoint.z + 8 },
+  lookAt: { x: marinaPoint.x, y: 1.1, z: marinaPoint.z }
 });
 
 renderer.setShotCamera('chase', {
-  position: { x: centroPlaza.x - 22, y: 7, z: centroPlaza.z - 26 },
-  lookAt: { x: centroPlaza.x, y: 2, z: centroPlaza.z }
+  position: { x: centroPlaza.x - 13, y: 4.5, z: centroPlaza.z - 16 },
+  lookAt: { x: centroPlaza.x - 1, y: 1.6, z: centroPlaza.z - 2 }
 });
 
 renderer.setShotCamera('mission', {
-  position: { x: centroPlaza.x + 50, y: 28, z: centroPlaza.z + 50 },
-  lookAt: { x: centroPlaza.x, y: 2, z: centroPlaza.z }
+  position: { x: centroPlaza.x + 27, y: 13, z: centroPlaza.z + 27 },
+  lookAt: { x: centroPlaza.x - 10, y: 1.5, z: centroPlaza.z - 10 }
 });
 
 function computeFollowCamera(world) {
@@ -191,20 +192,55 @@ function setupStagingMode(name) {
   stagingCameraName = name;
 
   if (name === 'cover') {
-    world.player.x = harbourCrane.x + 8;
-    world.player.z = harbourCrane.z + 5;
+    world.player.mode = 'foot';
+    world.player.vehicleId = null;
+    world.player.x = harbourPier.x - 4;
+    world.player.z = harbourPier.z + 42;
+    world.player.heading = Math.PI;
     const starterTruck = world.vehicles.find(v => v.isPlayerOwned) || world.vehicles[0];
     if (starterTruck) {
-      starterTruck.x = harbourCrane.x + 8;
-      starterTruck.z = harbourCrane.z + 5;
+      starterTruck.x = harbourPier.x + 5;
+      starterTruck.z = harbourPier.z + 44;
       starterTruck.heading = Math.PI / 4;
+      starterTruck.speed = 0;
     }
+    world.vehicles.push({
+      id: 9801, classIndex: 0, kind: 'traffic',
+      x: harbourCrane.x - 38, z: harbourCrane.z - 6,
+      heading: Math.PI / 2, speed: 0, health: 100,
+      bodyColour: '#c0c8d0', cabinColour: '#222222',
+      driverAi: null, isPlayerOwned: false, isWreck: false, isSmoking: false
+    });
+    world.vehicles.push({
+      id: 9802, classIndex: 2, kind: 'traffic',
+      x: harbourCrane.x + 44, z: harbourCrane.z - 20,
+      heading: -Math.PI / 2, speed: 0, health: 100,
+      bodyColour: '#7a4a21', cabinColour: '#1a1a1a',
+      driverAi: null, isPlayerOwned: false, isWreck: false, isSmoking: false
+    });
+    world.pedestrians.push(
+      { id: 9701, x: harbourPier.x - 10, z: harbourPier.z + 48, heading: 0.6, speed: 1.4, knocked: false, recoveryTick: 0, fleeing: false, fleeTimer: 0 },
+      { id: 9702, x: harbourPier.x + 12, z: harbourPier.z + 52, heading: -0.9, speed: 1.2, knocked: false, recoveryTick: 0, fleeing: false, fleeTimer: 0 },
+      { id: 9703, x: harbourCrane.x - 20, z: harbourCrane.z + 2, heading: 2.4, speed: 1.5, knocked: false, recoveryTick: 0, fleeing: false, fleeTimer: 0 }
+    );
   } else if (name === 'onfoot') {
     world.player.mode = 'foot';
     world.player.vehicleId = null;
     world.player.x = marinaPoint.x;
     world.player.z = marinaPoint.z;
     world.player.heading = Math.PI * 0.75;
+    world.pedestrians.push(
+      { id: 9711, x: marinaPoint.x + 3, z: marinaPoint.z + 2, heading: 2.2, speed: 1.3, knocked: false, recoveryTick: 0, fleeing: false, fleeTimer: 0 },
+      { id: 9712, x: marinaPoint.x - 4, z: marinaPoint.z + 6, heading: 0.4, speed: 1.5, knocked: false, recoveryTick: 0, fleeing: false, fleeTimer: 0 },
+      { id: 9713, x: marinaPoint.x + 6, z: marinaPoint.z - 3, heading: -1.8, speed: 1.2, knocked: false, recoveryTick: 0, fleeing: false, fleeTimer: 0 }
+    );
+    world.vehicles.push({
+      id: 9811, classIndex: 1, kind: 'traffic',
+      x: marinaPoint.x + 15, z: marinaPoint.z - 10,
+      heading: Math.PI, speed: 0, health: 100,
+      bodyColour: '#28518c', cabinColour: '#14181d',
+      driverAi: null, isPlayerOwned: false, isWreck: false, isSmoking: false
+    });
   } else if (name === 'chase') {
     const starterTruck = world.vehicles.find(v => v.isPlayerOwned) || world.vehicles[0];
     if (starterTruck) {
@@ -221,8 +257,8 @@ function setupStagingMode(name) {
       id: 9999,
       classIndex: 1,
       kind: 'police',
-      x: centroPlaza.x - 4.5,
-      z: centroPlaza.z - 6.0,
+      x: centroPlaza.x - 3.5,
+      z: centroPlaza.z - 5.0,
       heading: 0,
       speed: 12.0,
       health: 120,
@@ -324,7 +360,12 @@ function buildViewObject() {
   const veh = isDriving ? world.vehicles.find(v => v.id === p.vehicleId) : null;
   const activeMission = missionState.activeMissionIndex >= 0 ? MISSIONS[missionState.activeMissionIndex] : null;
 
+  world.vehicle = veh || null;
   return {
+    world,
+    mission: missionState,
+    missionState,
+    currentScreen: isStagingMode ? 'hud' : currentScreen,
     speed: veh ? Math.abs(veh.speed) * 3.6 : 0,
     health: p.health,
     stamina: p.stamina,
